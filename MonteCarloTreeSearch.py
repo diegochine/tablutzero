@@ -94,25 +94,25 @@ class MonteCarloTreeSearch:
     def compute_move(self, current_state):
         if current_state not in self.search_space:
             self.search_space.add_node(current_state, score=0, visits=0, checkers=current_state.get_checkers())
-        if len(self.search_space.adj[current_state]) == 0:
+        if len(self.search_space.adj[current_state]) != len(self._actions(current_state)):
             # if node has no children, we expand it
             for action in self._actions(current_state):
                 next_state = self._transition_function(current_state, action)
                 self.search_space.add_node(next_state, score=0, visits=0, checkers=next_state.get_checkers())
-                self.search_space.add_edge(current_state, next_state)
+                self.search_space.add_edge(current_state, next_state, action=action)
 
         # Selection Selecting good child nodes, starting from the root node R, that represent states leading to
         # better overall outcome (win).
         while True:  # TODO implement timeout
-            leaf = self._select_node(current_state)
+            leaf_state = self._select_node(current_state)
             # Expansion If L is a not a terminal node (i.e. it does not end the game), then create one or more
             # child nodes and select one (C).
-            next_state = self._expand(leaf)
+            new_state = self._expand(leaf_state)
             # Simulation (rollout)
             # Run a simulated playout from C until a result is achieved.
-            score = self._simulate_playout(next_state)
+            score = self._simulate_playout(new_state)
             # Backpropagation
-            self._backpropagate(next_state, score)
+            self._backpropagate(new_state, score)
 
     def _select_node(self, state):
         # UCB1: vi + 2 sqrt(ln(N)/ni)
@@ -121,11 +121,16 @@ class MonteCarloTreeSearch:
         # ni is the number of times the child node i has been visited
         pass
 
+    def _expand(self, state):
+        actions = self._actions(state)
+        a = actions[np.randint(0, len(actions))]
+        child = self._transition_function(state, a)
+        self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
+        self.search_space.add_edge(state, child, action=a)
+        return child
+
     def _simulate_playout(self, state):
         return 0
-
-    def _expand(self, state):
-        a = self._actions(state)
 
     def _backpropagate(self, next_state, score):
         pass
