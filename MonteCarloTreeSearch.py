@@ -6,7 +6,7 @@ from src.pytablut.State import State
 
 class MonteCarloTreeSearch:
 
-    def __init__(self, win_score=3, loss_score=0):
+    def __init__(self, player, win_score=3, loss_score=0):
         self.citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
                          (3, 0), (3, 8), (4, 0), (4, 1),
                          (4, 4),  # throne
@@ -16,6 +16,7 @@ class MonteCarloTreeSearch:
                         (1, 0), (2, 0), (6, 0), (7, 0),
                         (8, 1), (8, 2), (8, 6), (8, 7),
                         (1, 8), (2, 8), (6, 8), (7, 8)}
+        self.player = player
         self.win_score = win_score
         self.loss_score = loss_score
         self.search_space: DiGraph = DiGraph()
@@ -82,12 +83,12 @@ class MonteCarloTreeSearch:
     def _terminal_test(self, board, prec_move):
         if prec_move == 'WHITE':
             king = tuple(np.argwhere(board == 'KING').flatten())
-            return king in self.escapes
+            return king in self.escapes or 'BLACK' not in board
         else:
             return 'KING' not in board
 
-    def _utility(self, state, player):
-        if state.turn == player + 'WIN':
+    def _utility(self, state):
+        if state.turn == self.player + 'WIN':
             return self.win_score
         else:
             return self.loss_score
@@ -143,14 +144,18 @@ class MonteCarloTreeSearch:
 
     def _expand(self, state):
         actions = self._actions(state)
-        a = actions[np.randint(0, len(actions))]
+        a = actions[np.random.randint(0, len(actions))]
         child = self._transition_function(state, a)
         self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
         self.search_space.add_edge(state, child, action=a)
         return child
 
     def _simulate_playout(self, state):
-        return 0
+        while not state.turn.endswith('WIN'):
+            acts = self._actions(state)
+            a = acts[np.random.randint(0, len(acts))]
+            state = self._transition_function(state, a)
+        return self._utility(state)
 
     def _backpropagate(self, next_state, score):
         pass
