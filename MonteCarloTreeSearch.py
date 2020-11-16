@@ -18,7 +18,7 @@ class MonteCarloTreeSearch:
                         (1, 8), (2, 8), (6, 8), (7, 8)}
         self.win_score = win_score
         self.loss_score = loss_score
-        self.search_space = DiGraph()
+        self.search_space: DiGraph = DiGraph()
         s0 = State(board=np.array([['EMPTY', 'EMPTY', 'EMPTY', 'BLACK', 'BLACK', 'BLACK', 'EMPTY', 'EMPTY', 'EMPTY'],
                                    ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'BLACK', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'],
                                    ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'],
@@ -83,7 +83,7 @@ class MonteCarloTreeSearch:
             king = tuple(np.argwhere(board == 'KING').flatten())
             return king in self.escapes
         else:
-            return 'KING' in board
+            return 'KING' not in board
 
     def _utility(self, state, player):
         if state.turn == player + 'WIN':
@@ -94,6 +94,8 @@ class MonteCarloTreeSearch:
     def compute_move(self, current_state):
         if current_state not in self.search_space:
             self.search_space.add_node(current_state, score=0, visits=0, checkers=current_state.get_checkers())
+        if len(self.search_space.adj[current_state]) == 0:
+            # if node has no children, we expand it
             for action in self._actions(current_state):
                 next_state = self._transition_function(current_state, action)
                 self.search_space.add_node(next_state, score=0, visits=0, checkers=next_state.get_checkers())
@@ -124,7 +126,6 @@ class MonteCarloTreeSearch:
 
     def _expand(self, state):
         a = self._actions(state)
-
 
     def _backpropagate(self, next_state, score):
         pass
