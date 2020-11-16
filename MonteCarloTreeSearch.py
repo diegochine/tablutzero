@@ -114,7 +114,7 @@ class MonteCarloTreeSearch:
             # Run a simulated playout from C until a result is achieved.
             score = self._simulate_playout(new_state)
             # Backpropagation
-            self._backpropagate(new_state, score)
+            self._backpropagate(new_state, current_state, score)
 
     def _select_node(self, state):
         best_node = self.search_space.nodes[state]
@@ -122,6 +122,7 @@ class MonteCarloTreeSearch:
         while len(children) > 0:
             parent_visit = best_node['visits']
             max_uct = - np.inf
+            # FIXME fare meglio
             for s in children:
                 uct = self._ucb1(parent_visit, s['score'], s['visits'])
                 if uct > max_uct:
@@ -157,5 +158,13 @@ class MonteCarloTreeSearch:
             state = self._transition_function(state, a)
         return self._utility(state)
 
-    def _backpropagate(self, next_state, score):
-        pass
+    def _backpropagate(self, next_state, initial_state, score):
+        pred = next_state
+        while pred != initial_state:
+            self.search_space.nodes[pred]['score'] += score
+            self.search_space.nodes[pred]['visits'] += 1
+            # FIXME farlo per tutti i "padri"?
+            pred = list(self.search_space.predecessors(pred))[0]
+        self.search_space.nodes[initial_state]['score'] += score
+        self.search_space.nodes[initial_state]['visits'] += 1
+
