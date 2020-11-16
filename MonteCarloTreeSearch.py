@@ -40,7 +40,7 @@ class MonteCarloTreeSearch:
     def _actions(self, state):
         # TODO let black checkers go out of the citadels (can't go back)
         moves = []
-        for (x, y) in self.search_space[state]['checkers']:
+        for (x, y) in state.get_checkers():
             offx = 1
             # try up
             while (x - offx) >= 0 and (x - offx, y) not in self.citadels and state.board[x - offx, y] == 'EMPTY':
@@ -96,7 +96,7 @@ class MonteCarloTreeSearch:
     def compute_move(self, current_state):
         if current_state not in self.search_space:
             self.search_space.add_node(current_state, score=0, visits=0, checkers=current_state.get_checkers())
-        if len(self.search_space.adj[current_state]) != len(self._actions(current_state)):
+        if len(self.search_space.adj[current_state]) != 0:
             # if node has no children, we expand it
             for action in self._actions(current_state):
                 next_state = self._transition_function(current_state, action)
@@ -105,7 +105,9 @@ class MonteCarloTreeSearch:
 
         # Selection Selecting good child nodes, starting from the root node R, that represent states leading to
         # better overall outcome (win).
-        while True:  # TODO implement timeout
+        print('starting playouts')
+        for i in range(10**2):  # TODO implement timeout
+            print(i)
             leaf_state = self._select_node(current_state)
             # Expansion If L is a not a terminal node (i.e. it does not end the game), then create one or more
             # child nodes and select one (C).
@@ -115,16 +117,27 @@ class MonteCarloTreeSearch:
             score = self._simulate_playout(new_state)
             # Backpropagation
             self._backpropagate(new_state, current_state, score)
+        print('playouts over')
+        best_move = None
+        best_visits = -1
+        for succ in self.search_space.successors(current_state):
+            if self.search_space.nodes[succ]['visits'] > best_visits:
+                best_visits = self.search_space.nodes[succ]['visits']
+                best_move = self.search_space.edges[current_state, succ]['action']
+        return best_move
 
     def _select_node(self, state):
-        best_node = self.search_space.nodes[state]
-        children = self.search_space.adj[best_node]
+        best_node = state
+        children = list(self.search_space.successors(best_node))
+        # FIXME loop nel grafo
         while len(children) > 0:
-            parent_visit = best_node['visits']
+            parent_visit = self.search_space.nodes[best_node]['visits']
             max_uct = - np.inf
             # FIXME fare meglio
             for s in children:
-                uct = self._ucb1(parent_visit, s['score'], s['visits'])
+                uct = self._ucb1(parent_visit,
+                                 self.search_space.nodes[s]['score'],
+                                 self.search_space.nodes[s]['visits'])
                 if uct > max_uct:
                     max_uct = uct
                     best_node = s
@@ -145,11 +158,14 @@ class MonteCarloTreeSearch:
 
     def _expand(self, state):
         actions = self._actions(state)
-        a = actions[np.random.randint(0, len(actions))]
-        child = self._transition_function(state, a)
-        self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
-        self.search_space.add_edge(state, child, action=a)
-        return child
+        if actions:
+            a = actions[np.random.randint(0, len(actions))]
+            child = self._transition_function(state, a)
+            self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
+            self.search_space.add_edge(state, child, action=a)
+            return child
+        else:
+            return state
 
     def _simulate_playout(self, state):
         while not state.turn.endswith('WIN'):

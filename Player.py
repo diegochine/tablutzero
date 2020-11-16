@@ -1,19 +1,16 @@
 import json
 from socket import socket, AF_INET, SOCK_STREAM
-from abc import ABC, abstractmethod
 
 import numpy as np
-
 
 from src.pytablut.State import State
 from src.pytablut.MonteCarloTreeSearch import MonteCarloTreeSearch
 
 
-class Player(ABC):
+class Player:
     
     WHITE_PORT = 5800
     BLACK_PORT = 5801
-    MSGLEN = 1024
     
     def __init__(self, color, name, timeout=60, ip_address='localhost', algo='mcts'):
         """
@@ -30,19 +27,18 @@ class Player(ABC):
         if self.timeout <= 0:
             raise ValueError('timeout must be >0')
         if algo == 'mcts':
-            self.algo = MonteCarloTreeSearch()
+            self.algo = MonteCarloTreeSearch(self.color)
         else:
             raise ValueError('wrong algo parameter')
         self.board = None
         self.game_over = False
         self.turn = None
-        self.checkers = None
         self.ip_address = ip_address
         self.sock = self.__connect()
 
     def __json_to_state(self, state):
         state = State(board=np.array(state['board']),
-                      turn=state['turn'.upper()])
+                      turn=state['turn'])
         return state
 
     def __check_checkers(self):
@@ -110,8 +106,6 @@ class Player(ABC):
         return state
 
     def execute_move(self, move):
-        self.checkers.remove(move[0])
-        self.checkers.add(move[1])
         act = {'from': self._coord_to_cell(move[0]),
                'to': self._coord_to_cell(move[1]),
                'turn': self.color}
@@ -122,7 +116,7 @@ class Player(ABC):
         self.declare_name()
         while not self.game_over:
             state = self.read()
-            self.__check_checkers()
+            #self.__check_checkers()
             print('state received')
             if state.turn == self.color:
                 print('my turn')
@@ -142,7 +136,3 @@ class Player(ABC):
             print('i won!')
         else:
             print('i lost')
-
-    @abstractmethod
-    def __get_moves(self):
-        pass
