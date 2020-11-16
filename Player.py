@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
+from src.pytablut.State import State
 from src.pytablut.MonteCarloTreeSearch import MonteCarloTreeSearch
 
 
@@ -34,22 +35,15 @@ class Player(ABC):
             raise ValueError('wrong algo parameter')
         self.board = None
         self.game_over = False
-        self.citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
-                         (3, 0), (3, 8), (4, 0), (4, 1),
-                         (4, 4),  # castle
-                         (4, 7), (4, 8), (5, 0), (5, 8),
-                         (7, 4), (8, 3), (8, 4), (8, 5)}
-        self.board = None
         self.turn = None
         self.checkers = None
         self.ip_address = ip_address
         self.sock = self.__connect()
 
-    def __update_state(self, state):
-        self.board = np.array(state['board'])
-        print('Updating board')
-        print(self.board, '\n')
-        self.turn = state['turn'].upper()
+    def __json_to_state(self, state):
+        state = State(board=np.array(state['board']),
+                      turn=state['turn'.upper()])
+        return state
 
     def __check_checkers(self):
         """checks if opponent move ate any checkers,
@@ -78,10 +72,10 @@ class Player(ABC):
         """
         return ''.join([chr(coord[1]+97), str(coord[0]+1)])
 
-    def __compute_move(self):
+    def __compute_move(self, state):
         """ computes moves based on current state and algo"""
-        moves = self.__get_moves()
-        return moves[np.random.randint(low=0, high=len(moves))]
+        best_move = self.algo.compute_move(state)
+        return best_move
 
     def declare_name(self):
         """declares name to the server"""
@@ -109,10 +103,11 @@ class Player(ABC):
             if msg.find(ord('{'), 5) != -1:
                 msg = msg[msg.find(ord('{'), 5) - 4:]
         msg = msg[4:].decode()
-        state = json.loads(msg)
-        self.__update_state(state)
-        if self.turn not in ('BLACK', 'WHITE'):
+        json_state = json.loads(msg)
+        state = self.__json_to_state(json_state)
+        if state.turn not in ('BLACK', 'WHITE'):
             self.game_over = True
+        return state
 
     def execute_move(self, move):
         self.checkers.remove(move[0])
@@ -122,6 +117,22 @@ class Player(ABC):
                'turn': self.color}
         print(act)
         self.write(act)
+
+    def play(self):
+        self.declare_name()
+        while not self.game_over:
+            state = self.read()
+            self.__check_checkers()
+            print('state received')
+            if state.turn == self.color:
+                print('my turn')
+                move = self.__compute_move(state)
+                print('move computed')
+                self.execute_move(move)
+                print('move executed')
+            else:
+                print('other player\'s turn')
+        self.endgame()
 
     def endgame(self):
         """it's over mate"""
@@ -134,8 +145,4 @@ class Player(ABC):
 
     @abstractmethod
     def __get_moves(self):
-        pass
-
-    @abstractmethod
-    def play(self):
         pass
