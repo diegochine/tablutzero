@@ -37,6 +37,7 @@ class MonteCarloTreeSearch:
                                                    (4, 4)}
 
     def _actions(self, state):
+        # TODO let black checkers go out of the citadels (can't go back)
         moves = []
         for (x, y) in self.search_space[state]['checkers']:
             offx = 1
@@ -115,11 +116,30 @@ class MonteCarloTreeSearch:
             self._backpropagate(new_state, score)
 
     def _select_node(self, state):
+        best_node = self.search_space.nodes[state]
+        children = self.search_space.adj[best_node]
+        while len(children) > 0:
+            parent_visit = best_node['visits']
+            max_uct = - np.inf
+            for s in children:
+                uct = self._ucb1(parent_visit, s['score'], s['visits'])
+                if uct > max_uct:
+                    max_uct = uct
+                    best_node = s
+
+            children = self.search_space.adj[best_node]
+
+        return best_node
+
+    def _ucb1(self, total_visit, node_win_score, node_visit):
         # UCB1: vi + 2 sqrt(ln(N)/ni)
         # Vi is the average reward/value of all nodes beneath this node
         # N is the number of times the parent node has been visited, and
         # ni is the number of times the child node i has been visited
-        pass
+        if node_visit == 0:
+            return np.inf
+        else:
+            return (node_win_score / node_visit) + 2 * np.sqrt(np.log(total_visit) / node_visit)
 
     def _expand(self, state):
         actions = self._actions(state)
