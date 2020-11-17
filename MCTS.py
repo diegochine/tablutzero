@@ -1,112 +1,42 @@
 import numpy as np
-from networkx import DiGraph
 
 from src.pytablut.game import State
 
 
 class Node:
-    pass
+
+    def __init__(self, state):
+        self.state = state
+        self.id = hash(state)
+        self.edges = []
+
+    def is_leaf(self):
+        return len(self.edges) == 0
 
 
 class Edge:
-    pass
+
+    def __init__(self, in_node, out_node, p, action):
+        self.in_node = in_node
+        self.out_node = out_node
+        self.action = action
+        self.stats = {'N': 0, 'W': 0,
+                      'Q': 0, 'P': p}
 
 
 class MCTS:
 
-    def __init__(self, player, win_score=3, loss_score=0):
-        self.citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
-                         (3, 0), (3, 8), (4, 0), (4, 1),
-                         (4, 4),  # throne
-                         (4, 7), (4, 8), (5, 0), (5, 8),
-                         (7, 4), (8, 3), (8, 4), (8, 5)}
-        self.escapes = {(0, 1), (0, 2), (0, 6), (0, 7),
-                        (1, 0), (2, 0), (6, 0), (7, 0),
-                        (8, 1), (8, 2), (8, 6), (8, 7),
-                        (1, 8), (2, 8), (6, 8), (7, 8)}
+    def __init__(self, player, root):
         self.player = player
-        self.win_score = win_score
-        self.loss_score = loss_score
-        self.search_space: DiGraph = DiGraph()
-        s0 = State(board=np.array([['EMPTY', 'EMPTY', 'EMPTY', 'BLACK', 'BLACK', 'BLACK', 'EMPTY', 'EMPTY', 'EMPTY'],
-                                   ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'BLACK', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'],
-                                   ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'],
-                                   ['BLACK', 'EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY'],
-                                   ['BLACK', 'BLACK', 'WHITE', 'EMPTY', 'KING', 'WHITE', 'EMPTY', 'BLACK', 'BLACK'],
-                                   ['BLACK', 'EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY', 'EMPTY', 'BLACK'],
-                                   ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY'],
-                                   ['EMPTY', 'EMPTY', 'EMPTY', 'WHITE', 'EMPTY', 'EMPTY', 'EMPTY', 'EMPTY', 'BLACK'],
-                                   ['EMPTY', 'EMPTY', 'EMPTY', 'BLACK', 'BLACK', 'EMPTY', 'BLACK', 'EMPTY', 'EMPTY']]),
-                   turn='WHITE')
-        self.search_space.add_node(s0)
-        self.search_space.nodes[s0]['score'] = 0
-        self.search_space.nodes[s0]['visits'] = 0
-        self.search_space.nodes[s0]['checkers'] = {(2, 4), (3, 4), (4, 2), (4, 3),
-                                                   (4, 5), (4, 6), (5, 4), (6, 4),
-                                                   (4, 4)}
+        self.root = root
+        self.tree = {root.id: root}
 
-    def _actions(self, state):
-        # TODO let black checkers go out of the citadels (can't go back)
-        moves = []
-        for (x, y) in state.get_checkers():
-            offx = 1
-            # try up
-            while (x - offx) >= 0 and (x - offx, y) not in self.citadels and state.board[x - offx, y] == 'EMPTY':
-                moves.append(((x, y), (x - offx, y)))
-                offx += 1
-
-            # try down
-            offx = 1
-            while (x + offx) <= 8 and (x + offx, y) not in self.citadels and state.board[x + offx, y] == 'EMPTY':
-                moves.append(((x, y), (x + offx, y)))
-                offx += 1
-
-            # try left
-            offy = 1
-            while (y - offy) >= 0 and (x, y - offy) not in self.citadels and state.board[x, y - offy] == 'EMPTY':
-                moves.append(((x, y), (x, y - offy)))
-                offy += 1
-
-            # try right
-            offy = 1
-            while (y + offy) <= 8 and (x, y + offy) not in self.citadels and state.board[x, y + offy] == 'EMPTY':
-                moves.append(((x, y), (x, y + offy)))
-                offy += 1
-
-        return moves
-
-    def _transition_function(self, state, action):
-        pos_start, pos_end = action
-        board = state.board.copy()
-        board[pos_start], board[pos_end] = board[pos_end], board[pos_start]
-        # TODO check if checkers got eaten
-        if self._terminal_test(board, state.turn):
-            next_turn = state.turn + 'WIN'
-        elif state.turn == 'WHITE':
-            next_turn = 'BLACK'
-        else:
-            next_turn = 'WHITE'
-        return State(board=board, turn=next_turn)
-
-    def _terminal_test(self, board, prec_move):
-        if prec_move == 'WHITE':
-            king = tuple(np.argwhere(board == 'KING').flatten())
-            return king in self.escapes or 'BLACK' not in board
-        else:
-            return 'KING' not in board
-
-    def _utility(self, state):
-        if state.turn == self.player + 'WIN':
-            return self.win_score
-        else:
-            return self.loss_score
-
-    def compute_move(self, current_state):
+    def compute_move(self, current_state: State):
         if current_state not in self.search_space:
             self.search_space.add_node(current_state, score=0, visits=0, checkers=current_state.get_checkers())
         if len(self.search_space.adj[current_state]) != 0:
             # if node has no children, we expand it
-            for action in self._actions(current_state):
+            for action in current_state.actions:
                 next_state = self._transition_function(current_state, action)
                 self.search_space.add_node(next_state, score=0, visits=0, checkers=next_state.get_checkers())
                 self.search_space.add_edge(current_state, next_state, action=action)
@@ -165,10 +95,9 @@ class MCTS:
             return (node_win_score / node_visit) + 2 * np.sqrt(np.log(total_visit) / node_visit)
 
     def _expand(self, state):
-        actions = self._actions(state)
-        if actions:
-            a = actions[np.random.randint(0, len(actions))]
-            child = self._transition_function(state, a)
+        if state.actions:
+            a = state.actions[np.random.randint(0, len(state.actions))]
+            child = state.transition_function(a)
             self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
             self.search_space.add_edge(state, child, action=a)
             return child
@@ -177,9 +106,9 @@ class MCTS:
 
     def _simulate_playout(self, state):
         while not state.turn.endswith('WIN'):
-            acts = self._actions(state)
+            acts = state.actions
             a = acts[np.random.randint(0, len(acts))]
-            state = self._transition_function(state, a)
+            state = state.transition_function(a)
         return self._utility(state)
 
     def _backpropagate(self, next_state, initial_state, score):
