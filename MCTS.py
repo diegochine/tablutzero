@@ -1,10 +1,18 @@
 import numpy as np
 from networkx import DiGraph
 
-from src.pytablut.State import State
+from src.pytablut.game import State
 
 
-class MonteCarloTreeSearch:
+class Node:
+    pass
+
+
+class Edge:
+    pass
+
+
+class MCTS:
 
     def __init__(self, player, win_score=3, loss_score=0):
         self.citadels = {(0, 3), (0, 4), (0, 5), (1, 4),

@@ -3,8 +3,8 @@ from socket import socket, AF_INET, SOCK_STREAM
 
 import numpy as np
 
-from src.pytablut.State import State
-from src.pytablut.MonteCarloTreeSearch import MonteCarloTreeSearch
+from src.pytablut.game import State
+from src.pytablut.MCTS import MCTS
 
 
 class Player:
@@ -27,7 +27,7 @@ class Player:
         if self.timeout <= 0:
             raise ValueError('timeout must be >0')
         if algo == 'mcts':
-            self.algo = MonteCarloTreeSearch(self.color)
+            self.algo = MCTS(self.color)
         else:
             raise ValueError('wrong algo parameter')
         self.board = None

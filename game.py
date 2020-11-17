@@ -13,9 +13,16 @@ class State:
     def __eq__(self, other):
         return hash(self) == hash(other)
 
+    def __str__(self):
+        return str(self.board)
+
     def get_checkers(self):
         """ return positions of checkers that can be moved in this state """
         checkers = set(tuple(x) for x in np.argwhere(self.board == self.turn))
         if self.turn == 'WHITE':
             checkers.add(tuple(np.argwhere(self.board == 'KING')[0]))
         return checkers
+
+
+class Game:
+    pass
