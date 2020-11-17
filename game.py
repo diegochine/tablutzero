@@ -27,9 +27,9 @@ class State:
         return checkers
 
     def _terminal_test(self):
-        king = tuple(np.argwhere(self.board == 'KING').flatten())
-        white_win = king in Game.escapes or 'BLACK' not in self.board
-        black_win = 'KING' not in self.board
+        king = tuple(np.argwhere(self.board == 2).flatten())
+        white_win = king in Game.escapes or -1 not in self.board
+        black_win = 2 not in self.board
         return white_win or black_win
 
     def _get_actions(self, ):
@@ -67,14 +67,11 @@ class State:
         board = self.board.copy()
         board[pos_start], board[pos_end] = board[pos_end], board[pos_start]
         # TODO check if checkers got eaten
-        if self.turn == 'WHITE':
-            next_turn = 'BLACK'
-        else:
-            next_turn = 'WHITE'
-        return State(board=board, turn=next_turn)
+        return State(board=board, turn=-self.turn)
 
 
 class Game:
+
     citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
                 (3, 0), (3, 8), (4, 0), (4, 1),
                 (4, 4),  # throne
@@ -88,12 +85,12 @@ class Game:
     s0 = State(board=np.array([[0, 0, 0, -1, -1, -1, 0, 0, 0],
                                [0, 0, 0, 0, -1, 0, 0, 0, 0],
                                [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                               [-1, 0, 0, 0, 1, 0, 1, 0, 0],
-                               [-1, -1, 1, 0, 1, 1, 0, -1, -1],
+                               [-1, 0, 0, 0, 1, 0, 1, 0, -1],
+                               [-1, -1, 0, 1, 2, 1, 0, -1, -1],
                                [-1, 0, 0, 0, 1, 0, 0, 0, -1],
                                [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                               [0, 0, 0, 1, 0, 0, 0, 0, -1],
-                               [0, 0, 0, -1, -1, 0, -1, 0, 0]]),
+                               [0, 0, 0, 0, -1, 0, 0, 0, 0],
+                               [0, 0, 0, -1, -1, -1, 0, 0, 0]]),
                turn=1)
 
     def __init__(self):
