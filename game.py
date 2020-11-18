@@ -7,6 +7,7 @@ class Game:
                 (4, 4),  # throne
                 (4, 7), (4, 8), (5, 0), (5, 8),
                 (7, 4), (8, 3), (8, 4), (8, 5)}
+
     escapes = {(0, 1), (0, 2), (0, 6), (0, 7),
                (1, 0), (2, 0), (6, 0), (7, 0),
                (8, 1), (8, 2), (8, 6), (8, 7),
@@ -25,9 +26,17 @@ class Game:
     def __init__(self):
         self.current_player: int = 1
         self.current_state: State = State(board=self.s0, turn=1)
+        self.past_states = set()
+        self.past_states.add(self.current_state.id)
 
     def execute(self, action):
         self.current_state = self.current_state.transition_function(action)
+        if self.current_state.id in self.past_states:
+            self.current_state.is_terminal = True
+            self.current_state.value = 0
+        else:
+            self.past_states.add(self.current_state.id)
+        self.current_player = -self.current_player
 
 
 class State:
@@ -68,40 +77,60 @@ class State:
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
         if white_win or black_win:
-            # TODO need to check, black player needs to minimize whit values assigned like this?
+            # TODO need to check, black player needs to minimize with values assigned like this?
             if white_win:
                 self.value = 1
             else:
                 self.value = -1
             return True
+        #elif not self.actions:  # current player cannot move, he loses
+            #self.value = -self.turn
+            #return True
         else:
             return False
 
-    def _get_actions(self, ):
+    def __same_citadel_area(self, start: tuple, end: tuple) -> bool:
+        """
+        :returns True if both start and end are citadel cells and they are in the same group of citadels;
+        False otherwise"""
+        if start in Game.citadels and end in Game.citadels:
+            return np.abs(start[0] - end[0]) + np.abs(start[1] - end[1]) <= 2
+        else:
+            return False
+
+    def _get_actions(self):
         # TODO let black checkers go out of the citadels (can't go back)
         actions = []
         for (x, y) in self.checkers:
             offx = 1
             # try up
-            while (x - offx) >= 0 and (x - offx, y) not in Game.citadels and self.board[x - offx, y] == 0:
+            while (x - offx) >= 0 and \
+                    ((x - offx, y) not in Game.citadels or self.__same_citadel_area((x, y), (x - offx, y))) and \
+                    self.board[x - offx, y] == 0:
                 actions.append(((x, y), (x - offx, y)))
                 offx += 1
 
             # try down
             offx = 1
-            while (x + offx) <= 8 and (x + offx, y) not in Game.citadels and self.board[x + offx, y] == 0:
+            while (x + offx) <= 8 and \
+                    ((x + offx, y) not in Game.citadels or self.__same_citadel_area((x, y), (x + offx, y)))\
+                    and self.board[x + offx, y] == 0:
                 actions.append(((x, y), (x + offx, y)))
                 offx += 1
 
             # try left
             offy = 1
-            while (y - offy) >= 0 and (x, y - offy) not in Game.citadels and self.board[x, y - offy] == 0:
+            while (y - offy) >= 0 and \
+                    ((x, y - offy) not in Game.citadels or self.__same_citadel_area((x, y), (x, y - offy))) and \
+                    self.board[x, y - offy] == 0:
                 actions.append(((x, y), (x, y - offy)))
                 offy += 1
 
             # try right
             offy = 1
-            while (y + offy) <= 8 and (x, y + offy) not in Game.citadels and self.board[x, y + offy] == 0:
+            while (y + offy) <= 8 and \
+                    ((x, y + offy) not in Game.citadels or self.__same_citadel_area((x, y), (x, y + offy))) and \
+                    self.board[x, y + offy] == 0:
                 actions.append(((x, y), (x, y + offy)))
                 offy += 1
 
