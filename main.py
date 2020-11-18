@@ -1,6 +1,6 @@
 import argparse
 
-from src.pytablut.Player import Player
+from src.pytablut.player import Player
 from src.pytablut.game import Game
 
 if __name__ == '__main__':
