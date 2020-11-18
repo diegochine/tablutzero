@@ -6,118 +6,103 @@ from src.pytablut.game import State
 class Node:
 
     def __init__(self, state):
-        self.state = state
-        self.id = hash(state)
-        self.edges = []
+        """
+        each node of represents a state
+        :param state: state
+        """
+        self.state: State = state
+        self.id: int = hash(state)
+        self.edges: list = []
 
-    def is_leaf(self):
+    def is_leaf(self) -> bool:
         return len(self.edges) == 0
 
 
 class Edge:
 
-    def __init__(self, in_node, out_node, p, action):
-        self.in_node = in_node
-        self.out_node = out_node
+    def __init__(self, in_node: Node, out_node: Node, action):
+        """
+        each edge represents an action from a state to another
+        :param in_node: node of the initial state
+        :param out_node: node of the next state
+        :param p:
+        :param action: the action
+        """
+        self.in_node: Node = in_node
+        self.out_node: Node = out_node
         self.action = action
-        self.stats = {'N': 0, 'W': 0,
-                      'Q': 0, 'P': p}
+        self.N = 0  # number of times action has been taken from initial state
+        self.W = 0  # total value of next state
+        self.Q = 0  # mean value of next state
+        # self.P = p  # prior probability of selecting this action
 
 
 class MCTS:
 
-    def __init__(self, player, root):
+    def __init__(self, player, root: Node):
         self.player = player
-        self.root = root
+        self.root: Node = root
         self.tree = {root.id: root}
+        self.expand_leaf(self.root)
 
-    def compute_move(self, current_state: State):
-        if current_state not in self.search_space:
-            self.search_space.add_node(current_state, score=0, visits=0, checkers=current_state.get_checkers())
-        if len(self.search_space.adj[current_state]) != 0:
-            # if node has no children, we expand it
-            for action in current_state.actions:
-                next_state = self._transition_function(current_state, action)
-                self.search_space.add_node(next_state, score=0, visits=0, checkers=next_state.get_checkers())
-                self.search_space.add_edge(current_state, next_state, action=action)
+    def change_root(self, state: State) -> None:
+        self.root = self.tree[state.id]
+        if self.root.is_leaf():
+            self.expand_leaf(self.root)
 
-        # Selection Selecting good child nodes, starting from the root node R, that represent states leading to
-        # better overall outcome (win).
-        print('starting playouts')
-        for i in range(10**2):  # TODO implement timeout
-            print(i)
-            leaf_state = self._select_node(current_state)
-            # Expansion If L is a not a terminal node (i.e. it does not end the game), then create one or more
-            # child nodes and select one (C).
-            new_state = self._expand(leaf_state)
-            # Simulation (rollout)
-            # Run a simulated playout from C until a result is achieved.
-            score = self._simulate_playout(new_state)
-            # Backpropagation
-            self._backpropagate(new_state, current_state, score)
-        print('playouts over')
-        best_move = None
-        best_visits = -1
-        for succ in self.search_space.successors(current_state):
-            if self.search_space.nodes[succ]['visits'] > best_visits:
-                best_visits = self.search_space.nodes[succ]['visits']
-                best_move = self.search_space.edges[current_state, succ]['action']
-        return best_move
+    def add_node(self, node: Node):
+        self.tree[node.id] = node
 
-    def _select_node(self, state):
-        best_node = state
-        children = list(self.search_space.successors(best_node))
-        # FIXME loop nel grafo
-        while len(children) > 0:
-            parent_visit = self.search_space.nodes[best_node]['visits']
-            max_uct = - np.inf
-            # FIXME fare meglio
-            for s in children:
-                uct = self._ucb1(parent_visit,
-                                 self.search_space.nodes[s]['score'],
-                                 self.search_space.nodes[s]['visits'])
+    def select_leaf(self) -> (Node, list):
+        c = np.sqrt(2)
+        node = self.root
+        path = []
+
+        while not node.is_leaf():
+            max_uct = -np.inf
+            N = np.sum([edge.N for edge in node.edges])
+            simulation_edge = None
+
+            for edge in node.edges:
+                if edge.N == 0:
+                    uct = np.inf
+                else:
+                    uct = edge.Q + np.sqrt(c) * np.sqrt(np.log(N) / edge.N)
                 if uct > max_uct:
                     max_uct = uct
-                    best_node = s
+                    simulation_edge = edge
+            next_state = node.state.transition_function(simulation_edge.action)
+            node = simulation_edge.out_node
+            path.append(simulation_edge)
 
-            children = self.search_space.adj[best_node]
+        return node, path
 
-        return best_node
+    def expand_leaf(self, leaf: Node):
+        for action in leaf.state.actions:
+            next_state = leaf.state.transition_function(action)
+            if next_state.id not in self.tree:
+                new_leaf = Node(next_state)
+                self.add_node(new_leaf)
+            else:
+                new_leaf = self.tree[next_state.id]
+            new_edge = Edge(leaf, new_leaf, action)
+            leaf.edges.append(new_edge)
 
-    def _ucb1(self, total_visit, node_win_score, node_visit):
-        # UCB1: vi + 2 sqrt(ln(N)/ni)
-        # Vi is the average reward/value of all nodes beneath this node
-        # N is the number of times the parent node has been visited, and
-        # ni is the number of times the child node i has been visited
-        if node_visit == 0:
-            return np.inf
-        else:
-            return (node_win_score / node_visit) + 2 * np.sqrt(np.log(total_visit) / node_visit)
-
-    def _expand(self, state):
-        if state.actions:
-            a = state.actions[np.random.randint(0, len(state.actions))]
-            child = state.transition_function(a)
-            self.search_space.add_node(child, score=0, visits=0, checkers=child.get_checkers())
-            self.search_space.add_edge(state, child, action=a)
-            return child
-        else:
-            return state
-
-    def _simulate_playout(self, state):
-        while not state.turn.endswith('WIN'):
+    def random_playout(self, leaf: Node):
+        state = leaf.state
+        while not state.is_terminal:
             acts = state.actions
-            a = acts[np.random.randint(0, len(acts))]
-            state = state.transition_function(a)
-        return self._utility(state)
+            # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high)
+            rnd_a = acts[np.random.randint(0, len(acts))]
+            state = state.transition_function(rnd_a)
+        return state.value
 
-    def _backpropagate(self, next_state, initial_state, score):
-        pred = next_state
-        while pred != initial_state:
-            self.search_space.nodes[pred]['score'] += score
-            self.search_space.nodes[pred]['visits'] += 1
-            # FIXME farlo per tutti i "padri"?
-            pred = list(self.search_space.predecessors(pred))[0]
-        self.search_space.nodes[initial_state]['score'] += score
-        self.search_space.nodes[initial_state]['visits'] += 1
+    def backpropagation(self, score: int, path: list):
+        for edge in path:
+            edge.N += 1
+            edge.W += score
+            edge.Q = edge.W / edge.N
 
+    def choose_action(self):
+        best_N = np.argmax([edge.N for edge in self.root.edges])
+        return self.root.edges[best_N].action

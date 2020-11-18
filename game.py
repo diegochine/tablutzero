@@ -1,14 +1,51 @@
 import numpy as np
 
 
+class Game:
+    citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
+                (3, 0), (3, 8), (4, 0), (4, 1),
+                (4, 4),  # throne
+                (4, 7), (4, 8), (5, 0), (5, 8),
+                (7, 4), (8, 3), (8, 4), (8, 5)}
+    escapes = {(0, 1), (0, 2), (0, 6), (0, 7),
+               (1, 0), (2, 0), (6, 0), (7, 0),
+               (8, 1), (8, 2), (8, 6), (8, 7),
+               (1, 8), (2, 8), (6, 8), (7, 8)}
+
+    s0 = np.array([[0, 0, 0, -1, -1, -1, 0, 0, 0],
+                   [0, 0, 0, 0, -1, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                   [-1, 0, 0, 0, 1, 0, 0, 0, -1],
+                   [-1, -1, 1, 1, 2, 1, 1, -1, -1],
+                   [-1, 0, 0, 0, 1, 0, 0, 0, -1],
+                   [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                   [0, 0, 0, 0, -1, 0, 0, 0, 0],
+                   [0, 0, 0, -1, -1, -1, 0, 0, 0]])
+
+    def __init__(self):
+        self.current_player: int = 1
+        self.current_state: State = State(board=self.s0, turn=1)
+
+    def execute(self, action):
+        self.current_state = self.current_state.transition_function(action)
+
+
 class State:
 
     def __init__(self, board, turn):
+        """
+        representation of the state:
+        :param board: 9x9 matrix, filled with values according to map
+        :param turn: current player, according to map
+        the map is: 'EMPTY': 0, 'BLACK': -1, 'WHITE': 1, 'KING': 2
+        """
         self.board = board
         self.turn = turn
+        self.id = self.__hash__()
+        self.value = 0
+        self.is_terminal = self._terminal_test()
         self.checkers = self._get_checkers()
         self.actions = self._get_actions()
-        self.is_terminal = self._terminal_test()
 
     def __hash__(self):
         return hash((tuple(tuple(row) for row in self.board), self.turn))
@@ -22,7 +59,7 @@ class State:
     def _get_checkers(self):
         """ return positions of checkers that can be moved in this state """
         checkers = set(tuple(x) for x in np.argwhere(self.board == self.turn))
-        if self.turn == 1:
+        if self.turn == 1 and 2 in self.board:
             checkers.add(tuple(np.argwhere(self.board == 2)[0]))
         return checkers
 
@@ -30,7 +67,15 @@ class State:
         king = tuple(np.argwhere(self.board == 2).flatten())
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
-        return white_win or black_win
+        if white_win or black_win:
+            # TODO need to check, black player needs to minimize whit values assigned like this?
+            if white_win:
+                self.value = 1
+            else:
+                self.value = -1
+            return True
+        else:
+            return False
 
     def _get_actions(self, ):
         # TODO let black checkers go out of the citadels (can't go back)
@@ -107,33 +152,3 @@ class State:
                 # remove the checker
                 board[row_to + 1, col_to] = 0
         return board
-
-class Game:
-
-    citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
-                (3, 0), (3, 8), (4, 0), (4, 1),
-                (4, 4),  # throne
-                (4, 7), (4, 8), (5, 0), (5, 8),
-                (7, 4), (8, 3), (8, 4), (8, 5)}
-    escapes = {(0, 1), (0, 2), (0, 6), (0, 7),
-               (1, 0), (2, 0), (6, 0), (7, 0),
-               (8, 1), (8, 2), (8, 6), (8, 7),
-               (1, 8), (2, 8), (6, 8), (7, 8)}
-
-    s0 = State(board=np.array([[0, 0, 0, -1, -1, -1, 0, 0, 0],
-                               [0, 0, 0, 0, -1, 0, 0, 0, 0],
-                               [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                               [-1, 0, 0, 0, 1, 0, 1, 0, -1],
-                               [-1, -1, 0, 1, 2, 1, 0, -1, -1],
-                               [-1, 0, 0, 0, 1, 0, 0, 0, -1],
-                               [0, 0, 0, 0, 1, 0, 0, 0, 0],
-                               [0, 0, 0, 0, -1, 0, 0, 0, 0],
-                               [0, 0, 0, -1, -1, -1, 0, 0, 0]]),
-               turn=1)
-
-    def __init__(self):
-        self.current_player = 1
-        self.current_state = self.s0
-
-    def execute(self, action):
-        pass
