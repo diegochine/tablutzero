@@ -22,8 +22,8 @@ class State:
     def _get_checkers(self):
         """ return positions of checkers that can be moved in this state """
         checkers = set(tuple(x) for x in np.argwhere(self.board == self.turn))
-        if self.turn == 'WHITE':
-            checkers.add(tuple(np.argwhere(self.board == 'KING')[0]))
+        if self.turn == 1:
+            checkers.add(tuple(np.argwhere(self.board == 2)[0]))
         return checkers
 
     def _terminal_test(self):
@@ -38,25 +38,25 @@ class State:
         for (x, y) in self.checkers:
             offx = 1
             # try up
-            while (x - offx) >= 0 and (x - offx, y) not in Game.citadels and self.board[x - offx, y] == 'EMPTY':
+            while (x - offx) >= 0 and (x - offx, y) not in Game.citadels and self.board[x - offx, y] == 0:
                 actions.append(((x, y), (x - offx, y)))
                 offx += 1
 
             # try down
             offx = 1
-            while (x + offx) <= 8 and (x + offx, y) not in Game.citadels and self.board[x + offx, y] == 'EMPTY':
+            while (x + offx) <= 8 and (x + offx, y) not in Game.citadels and self.board[x + offx, y] == 0:
                 actions.append(((x, y), (x + offx, y)))
                 offx += 1
 
             # try left
             offy = 1
-            while (y - offy) >= 0 and (x, y - offy) not in Game.citadels and self.board[x, y - offy] == 'EMPTY':
+            while (y - offy) >= 0 and (x, y - offy) not in Game.citadels and self.board[x, y - offy] == 0:
                 actions.append(((x, y), (x, y - offy)))
                 offy += 1
 
             # try right
             offy = 1
-            while (y + offy) <= 8 and (x, y + offy) not in Game.citadels and self.board[x, y + offy] == 'EMPTY':
+            while (y + offy) <= 8 and (x, y + offy) not in Game.citadels and self.board[x, y + offy] == 0:
                 actions.append(((x, y), (x, y + offy)))
                 offy += 1
 
@@ -66,9 +66,47 @@ class State:
         pos_start, pos_end = action
         board = self.board.copy()
         board[pos_start], board[pos_end] = board[pos_end], board[pos_start]
-        # TODO check if checkers got eaten
+        # check if any enemy checkers got eaten
+        board = self._check_enemy_capture(board, pos_end, -self.turn)
+        if self.turn == -1:
+            # checking capture of the king in black's turn
+            if board[4, 4] == 2:
+                # king in the throne
+                if board[3, 4] == -1 and board[5, 4] == -1 and board[4, 5] == -1 and board[4, 3] == -1:
+                    # king is surrounded, remove it
+                    board[4, 4] = 0
+            else:
+                board = self._check_enemy_capture(board, pos_end, 2)
+
         return State(board=board, turn=-self.turn)
 
+    def _check_enemy_capture(self, board, arrival, enemy):
+        row_to, col_to = arrival
+        if col_to < board.shape[1] - 2 and board[row_to, col_to + 1] == enemy:
+            # on the right there's an enemy
+            over_the_enemy = (row_to, col_to + 2)
+            if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
+                # remove the checker
+                board[row_to, col_to + 1] = 0
+        if col_to > 1 and board[row_to, col_to - 1] == enemy:
+            # on the left there's an enemy
+            over_the_enemy = (row_to, col_to - 2)
+            if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
+                # remove the checker
+                board[row_to, col_to - 1] = 0
+        if row_to > 1 and board[row_to - 1, col_to] == enemy:
+            # above there's an enemy
+            over_the_enemy = (row_to - 2, col_to)
+            if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
+                # remove the checker
+                board[row_to - 1, col_to] = 0
+        if row_to < board.shape[0] - 2 and board[row_to + 1, col_to] == enemy:
+            # below there's an enemy
+            over_the_enemy = (row_to + 2, col_to)
+            if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
+                # remove the checker
+                board[row_to + 1, col_to] = 0
+        return board
 
 class Game:
 
