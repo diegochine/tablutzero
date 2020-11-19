@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import matplotlib.pyplot as plt
 
+from tensorflow.nn import softmax_cross_entropy_with_logits
 from keras import Input
 from keras.models import Model, load_model
 from keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU, add
@@ -18,7 +19,7 @@ logger = lg.logger_nnet
 def loss_with_action_masking(y_true, y_pred):
     logits = y_true
     labels = np.where(y_true == 0, -100, y_pred)
-    return tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+    return softmax_cross_entropy_with_logits(labels=labels, logits=logits)
 
 
 class NeuralNetwork(ABC):
