@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-from keras import Input
+import matplotlib.pyplot as plt
 
+from keras import Input
 from keras.models import Model, load_model
 from keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU, add
 from keras.optimizers import SGD
 from keras.regularizers import l2
 
 import pytablut.config as cfg
+import pytablut.loggers as lg
+
+logger = lg.logger_nnet
 
 
 class NeuralNetwork(ABC):
@@ -34,6 +38,60 @@ class NeuralNetwork(ABC):
 
     def load_model(self, version):
         return load_model('models/version{}.h5'.format(version))
+
+    def printWeightAverages(self):
+        layers = self.model.layers
+        for i, l in enumerate(layers):
+            x = l.get_weights()[0]
+            lg.logger_nnet.info('WEIGHT LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'.format(i,
+                                    np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
+        lg.logger_nnet.info('------------------')
+        for i, l in enumerate(layers):
+            x = l.get_weights()[1]
+            lg.logger_nnet.info('BIAS LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'.format(i,
+                np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
+        lg.logger_nnet.info('******************')
+
+    def viewLayers(self):
+        layers = self.model.layers
+        for i, l in enumerate(layers):
+            x = l.get_weights()
+            print('LAYER ' + str(i))
+            try:
+                weights = x[0]
+                s = weights.shape
+                fig = plt.figure(figsize=(s[2], s[3]))  # width, height in inches
+                channel = 0
+                filter = 0
+                for i in range(s[2] * s[3]):
+                    sub = fig.add_subplot(s[3], s[2], i + 1)
+                    sub.imshow(weights[:, :, channel, filter], cmap='coolwarm', clim=(-1, 1), aspect="auto")
+                    channel = (channel + 1) % s[2]
+                    filter = (filter + 1) % s[3]
+            except:
+                try:
+                    fig = plt.figure(figsize=(3, len(x)))  # width, height in inches
+                    for i in range(len(x)):
+                        sub = fig.add_subplot(len(x), 1, i + 1)
+                        if i == 0:
+                            clim = (0, 2)
+                        else:
+                            clim = (0, 2)
+                        sub.imshow([x[i]], cmap='coolwarm', clim=clim, aspect="auto")
+                    plt.show()
+
+                except:
+                    try:
+                        fig = plt.figure(figsize=(3, 3))  # width, height in inches
+                        sub = fig.add_subplot(1, 1, 1)
+                        sub.imshow(x[0], cmap='coolwarm', clim=(-1, 1), aspect="auto")
+                        plt.show()
+                    except:
+                        pass
+
+            plt.show()
+
+        lg.logger_nnet.info('------------------')
 
     @abstractmethod
     def _build_model(self):
