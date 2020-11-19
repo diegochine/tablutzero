@@ -176,3 +176,10 @@ class State:
                 # remove the checker
                 board[row_to + 1, col_to] = 0
         return board
+
+    def convert_into_cnn(self):
+        black = np.where(self.board == -1, 1, 0)
+        white = np.where(self.board == 1, 1, 0)
+        king = np.where(self.board == 2, 1, 0)
+        turn = np.full((9, 9), self.turn, dtype=int)
+        return np.stack([black, white, king, turn], axis=2)

@@ -169,13 +169,13 @@ class ResidualNN(NeuralNetwork):
         policy_head = self._policy_head(x)
 
         model = Model(inputs=[input], outputs=[value_head, policy_head])
-        model.compile(loss={'value_head': 'mean_squared_error', 'policy_head': custom},
+        model.compile(loss={'value_head': 'mean_squared_error', 'policy_head':  custom},
                       optimizer=SGD(lr=self.learning_rate, momentum=self.momentum),
                       loss_weights={'value_head': 0.5, 'policy_head': 0.5})
 
         return model
 
     def state_to_model_input(self, state):
-        # TODO finish this conversion
-        model_input = np.reshape(state, self.input_shape)
+        converted = state.convert_into_cnn()
+        model_input = np.reshape(converted, self.input_shape)
         return model_input
