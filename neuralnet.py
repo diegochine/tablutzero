@@ -15,6 +15,12 @@ import pytablut.loggers as lg
 logger = lg.logger_nnet
 
 
+def loss_with_action_masking(y_true, y_pred):
+    logits = y_true
+    labels = np.where(y_true == 0, -100, y_pred)
+    return tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+
+
 class NeuralNetwork(ABC):
 
     def __init__(self, input_shape, output_shape,
@@ -41,15 +47,15 @@ class NeuralNetwork(ABC):
 
     def printWeightAverages(self):
         layers = self.model.layers
+        msg = 'WEIGHT LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'
         for i, l in enumerate(layers):
             x = l.get_weights()[0]
-            lg.logger_nnet.info('WEIGHT LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'.format(i,
-                                    np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
+            lg.logger_nnet.info(msg.format(i, np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
         lg.logger_nnet.info('------------------')
+        msg = 'BIAS LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'
         for i, l in enumerate(layers):
             x = l.get_weights()[1]
-            lg.logger_nnet.info('BIAS LAYER {:d}: ABSAV = {:f}, SD ={:f}, ABSMAX ={:f}, ABSMIN ={:f}'.format(i,
-                np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
+            lg.logger_nnet.info(msg.format(i, np.mean(np.abs(x)), np.std(x), np.max(np.abs(x)), np.min(np.abs(x))))
         lg.logger_nnet.info('******************')
 
     def viewLayers(self):
@@ -169,7 +175,7 @@ class ResidualNN(NeuralNetwork):
         policy_head = self._policy_head(x)
 
         model = Model(inputs=[input], outputs=[value_head, policy_head])
-        model.compile(loss={'value_head': 'mean_squared_error', 'policy_head':  custom},
+        model.compile(loss={'value_head': 'mean_squared_error', 'policy_head': loss_with_action_masking},
                       optimizer=SGD(lr=self.learning_rate, momentum=self.momentum),
                       loss_weights={'value_head': 0.5, 'policy_head': 0.5})
 
