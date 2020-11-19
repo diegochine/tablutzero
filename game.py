@@ -1,5 +1,7 @@
 import numpy as np
 
+MAP = {'EMPTY': 0, 'BLACK': -1, 'WHITE': 1, 'KING': 2}
+
 
 class Game:
     citadels = {(0, 3), (0, 4), (0, 5), (1, 4),
@@ -48,13 +50,13 @@ class State:
         :param turn: current player, according to map
         the map is: 'EMPTY': 0, 'BLACK': -1, 'WHITE': 1, 'KING': 2
         """
-        self.board = board
-        self.turn = turn
-        self.id = self.__hash__()
-        self.value = 0
-        self.is_terminal = self._terminal_test()
-        self.checkers = self._get_checkers()
-        self.actions = self._get_actions()
+        self.board: np.ndarray = board
+        self.turn: int = turn
+        self.id: int = self.__hash__()
+        self.value: int = 0
+        self.checkers: set = self._get_checkers()
+        self.actions: list = self._get_actions()
+        self.is_terminal: bool = self._terminal_test()
 
     def __hash__(self):
         return hash((tuple(tuple(row) for row in self.board), self.turn))
@@ -65,27 +67,21 @@ class State:
     def __str__(self):
         return str(self.board)
 
-    def _get_checkers(self):
+    def _get_checkers(self) -> set:
         """ return positions of checkers that can be moved in this state """
         checkers = set(tuple(x) for x in np.argwhere(self.board == self.turn))
         if self.turn == 1 and 2 in self.board:
             checkers.add(tuple(np.argwhere(self.board == 2)[0]))
         return checkers
 
-    def _terminal_test(self):
+    def _terminal_test(self) -> bool:
         king = tuple(np.argwhere(self.board == 2).flatten())
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
-        if white_win or black_win:
-            # TODO need to check, black player needs to minimize with values assigned like this?
-            if white_win:
-                self.value = 1
-            else:
-                self.value = -1
+        if (white_win or black_win) or not self.actions:
+            # either the current player has lost or he cannot move (so he lost)
+            self.value = -1
             return True
-        #elif not self.actions:  # current player cannot move, he loses
-            #self.value = -self.turn
-            #return True
         else:
             return False
 
@@ -98,8 +94,7 @@ class State:
         else:
             return False
 
-    def _get_actions(self):
-        # TODO let black checkers go out of the citadels (can't go back)
+    def _get_actions(self) -> list:
         actions = []
         for (x, y) in self.checkers:
             offx = 1
@@ -136,7 +131,7 @@ class State:
 
         return actions
 
-    def transition_function(self, action):
+    def transition_function(self, action: tuple):
         pos_start, pos_end = action
         board = self.board.copy()
         board[pos_start], board[pos_end] = board[pos_end], board[pos_start]
@@ -154,7 +149,7 @@ class State:
 
         return State(board=board, turn=-self.turn)
 
-    def _check_enemy_capture(self, board, arrival, enemy):
+    def _check_enemy_capture(self, board: np.ndarray, arrival: tuple, enemy: int):
         row_to, col_to = arrival
         if col_to < board.shape[1] - 2 and board[row_to, col_to + 1] == enemy:
             # on the right there's an enemy

@@ -1,20 +1,19 @@
-import numpy as np
-
-from src.pytablut.MCTS import MCTS, Node
+from pytablut.MCTS import MCTS, Node
+from pytablut.game import MAP
 
 
 class Player:
 
-    def __init__(self, color, name, timeout=60, simulations=160):
+    def __init__(self, color, name, timeout=60, simulations=500):
         """
         :param color: color of the player, either BLACK or WHITE
         :param name: name of the player
         :param timeout: timeout in seconds for each move computation
         """
         self.name = name
-        self.color = color.upper()
-        if self.color not in ('BLACK', 'WHITE'):
+        if color not in ('BLACK', 'WHITE'):
             raise ValueError('wrong color, must either BLACK or WHITE ')
+        self.color = MAP[color]
         self.timeout = timeout
         if self.timeout <= 0:
             raise ValueError('timeout must be >0')
@@ -40,7 +39,7 @@ class Player:
 
         return action
 
-    def simulate(self):
+    def simulate(self) -> None:
         # selection
         leaf, path = self.mcts.select_leaf()
         # expansion

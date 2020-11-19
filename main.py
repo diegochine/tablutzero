@@ -1,7 +1,7 @@
 import argparse
 
-from src.pytablut.player import Player
-from src.pytablut.game import Game
+from pytablut.player import Player
+from pytablut.game import Game
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to launch players.')
@@ -22,7 +22,8 @@ if __name__ == '__main__':
                    timeout=args.timeout,
                    simulations=args.simulations)
     game = Game()
-    map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
+    endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
+
     while not game.current_state.is_terminal:
         print(game.current_state.board)
         if game.current_player == 1:
@@ -31,6 +32,7 @@ if __name__ == '__main__':
         else:
             print('BLACK')
             act = black.act(game.current_state)
-
+        print('move:', act)
         game.execute(act)
-    print('Winner of the game is', map[game.current_state.value])
+
+    print('Winner of the game is', endgame_map[game.current_state.value])

@@ -1,6 +1,9 @@
 import numpy as np
 
-from src.pytablut.game import State
+from pytablut.game import State
+import pytablut.loggers as lg
+
+logger = lg.logger_mcts
 
 
 class Node:
@@ -25,12 +28,11 @@ class Edge:
         each edge represents an action from a state to another
         :param in_node: node of the initial state
         :param out_node: node of the next state
-        :param p:
         :param action: the action
         """
         self.in_node: Node = in_node
         self.out_node: Node = out_node
-        self.action = action
+        self.action: tuple = action
         self.N = 0  # number of times action has been taken from initial state
         self.W = 0  # total value of next state
         self.Q = 0  # mean value of next state
@@ -89,6 +91,7 @@ class MCTS:
             leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):
+        logger.info('PERFORMING RANDOM PLAYOUT')
         state = leaf.state
         while not state.is_terminal:
             acts = state.actions
@@ -98,11 +101,12 @@ class MCTS:
         return state.value
 
     def backpropagation(self, score: int, path: list):
+        logger.info('PERFORMING BACKPROPAGATION')
         for edge in path:
             edge.N += 1
             edge.W += score
             edge.Q = edge.W / edge.N
 
-    def choose_action(self):
+    def choose_action(self) -> tuple:
         best_N = np.argmax([edge.N for edge in self.root.edges])
         return self.root.edges[best_N].action
