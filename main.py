@@ -1,26 +1,16 @@
-import argparse
-
+import pytablut.config as cfg
 from pytablut.player import Player
 from pytablut.game import Game
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script to launch players.')
-    parser.add_argument('timeout', type=int,
-                        help='timeout in seconds')
-    parser.add_argument('-s', '--simulations', type=int,
-                        help='number of monte carlo simulations')
-    parser.add_argument('-n', '--name', type=str, default='dioboia',
-                        help='name of the player')
-
-    args = parser.parse_args()
     white = Player(color='WHITE',
                    name='dc',
-                   timeout=args.timeout,
-                   simulations=args.simulations)
+                   timeout=cfg.TIMEOUT,
+                   simulations=cfg.MCTS_SIMULATIONS)
     black = Player(color='BLACK',
                    name='pd',
-                   timeout=args.timeout,
-                   simulations=args.simulations)
+                   timeout=cfg.TIMEOUT,
+                   simulations=cfg.MCTS_SIMULATIONS)
     game = Game()
     endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
 
