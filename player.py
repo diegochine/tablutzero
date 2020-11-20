@@ -42,7 +42,7 @@ class Player:
     def simulate(self) -> None:
         # selection
         leaf, path = self.mcts.select_leaf()
-        pi, v = self.nn.predict(leaf.state)
+        v, pi, action_map = self.nn.predict(leaf.state)
         # expansion
         self.mcts.expand_leaf(leaf, pi)
         # backpropagation

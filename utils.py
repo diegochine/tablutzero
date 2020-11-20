@@ -1,15 +1,24 @@
 class Map:
 
     def __init__(self):
-        self.atob = dict()
-        self.btoa = dict()
+        self.atoc = dict()
+        self.ctoa = dict()
 
-    def __setitem__(self, a, b):
-        self.atob[a] = b
-        self.btoa[b] = a
+    def __setitem__(self, a, c):
+        self.atoc[a] = c
+        self.ctoa[c] = a
 
     def __getitem__(self, x):
-        if x in self.atob:
-            return self.atob[x]
+        if x in self.atoc:
+            return self.atoc[x]
         else:
-            return self.btoa[x]
+            return self.ctoa[x]
+
+    def get_keys(self, dim):
+        if dim == 2:
+            return self.atoc.keys()
+        elif dim == 3:
+            return self.ctoa.keys()
+        else:
+            raise ValueError("dim must be either 2 o 3")
+

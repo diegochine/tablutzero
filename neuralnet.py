@@ -8,6 +8,7 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten, BatchNormalization, 
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
 
+from pytablut.utils import Map
 import pytablut.config as cfg
 import pytablut.loggers as lg
 
@@ -186,6 +187,14 @@ class ResidualNN(NeuralNetwork):
         return model_input
 
     def predict(self, state):
+        # TODO avere parametro che mi indica se sono in training o no
+        ''' Per il training : mi faccio un nd array 9 9 32 tutto a -100
+            e fillo gli indici delle azioni valide con le predizioni
+            perché il tutto va salvato per registrare i dati su cui allenarsi
+
+            Per la competizione :  ritorno direttamente solo un dizionario
+            azione (da, a) --> predizione
+        '''
         input_to_model = np.array([self.state_to_model_input(state)])
 
         preds = self.model.predict(input_to_model)
@@ -195,23 +204,30 @@ class ResidualNN(NeuralNetwork):
         # FIXME sarà giusto? diego dice di fare reshape da 1x9x9x32 a 9x9x32
         logits = logits_array.reshape(self.output_shape)
 
-        allowed_actions = self.map_actions(state.actions)
+        action_position = self.map_actions(state.actions)
 
-        logits[np.logical_not(logits, allowed_actions)] = -100
+        to_be_saved = np.full(self.output_shape, -100)
+        for index in action_position.get_keys(3):
+            to_be_saved[index] = logits[index]
 
         # SOFTMAX
-        odds = np.exp(logits)
+        odds = np.exp(to_be_saved)
         probs = odds / np.sum(odds)
 
-        return value, probs, allowed_actions
+        return value, probs, action_position
 
-    def map_actions(self, logits, actions):
-        # HOWTO understanding the output mapping
-        # 32 levels in 2 groups of 16
-        # every group is one axis: rows, columns (with this order)
-        # the first layer of every group represents moving by -8 cells on that axis
-        # the last layer of every group represents moving by +8 cells on that axis
-        mask = np.full(logits.shape, False, dtype=bool)
+    def map_actions(self, actions):
+        # TODO avere parametro che mi indica se sono in training o no
+        ''' Returns a one to one dictionary that maps an action with
+            the coordinates of the nn output
+
+            Understanding the output mapping:
+            32 levels in 2 groups of 16,
+            every group is one axis: rows, columns (with this order)
+            the first layer of every group represents moving by -8 cells on that axis
+            the last layer of every group represents moving by +8 cells on that axis
+        '''
+        the_map = Map()
         for a_from, a_to in actions:
             distance_x, distance_y = np.subtract(a_to, a_from)
             if distance_x != 0:
@@ -220,9 +236,14 @@ class ResidualNN(NeuralNetwork):
                 if distance_x > 0: # because when x=1 I want the 8th layer as x can't be 0
                     offset = 7
                 # so distance_x + offset is my layer
+                layer = distance_x + offset
             else:
                 # left or right
                 offset = 24
                 if distance_y > 0:  # because when x=1 I want the 8th layer as x can't be 0
                     offset = 23
-        return mask
+                layer = distance_y + offset
+
+            idx = (a_from[0], a_from[1], layer)
+            the_map[(a_from, a_to)] = idx
+        return the_map
