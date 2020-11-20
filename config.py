@@ -19,6 +19,8 @@ REG_CONST = 0.0001
 LEARNING_RATE = 0.1
 MOMENTUM = 0.9
 TRAINING_LOOPS = 10
+IN_SHAPE = (9, 9, 4)
+OUT_SHAPE = (9, 9, 32)
 
 HIDDEN_LAYERS = [
     {'filters': 128, 'kernel_size': 3},
