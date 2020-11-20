@@ -1,10 +1,11 @@
+import pytablut.config as cfg
 from pytablut.MCTS import MCTS, Node
 from pytablut.game import MAP
 
 
 class Player:
 
-    def __init__(self, color, name, timeout=60, simulations=500):
+    def __init__(self, color, name, nnet, timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS):
         """
         :param color: color of the player, either BLACK or WHITE
         :param name: name of the player
@@ -20,6 +21,7 @@ class Player:
         self.mcts = None
         self.simulations = simulations
         self.game_over = False
+        self.brain = nnet
 
     def build_mcts(self, state):
         self.mcts = MCTS(self.color, Node(state))
@@ -42,7 +44,7 @@ class Player:
     def simulate(self) -> None:
         # selection
         leaf, path = self.mcts.select_leaf()
-        v, pi, action_map = self.nn.predict(leaf.state)
+        v, pi, action_map = self.brain.predict(leaf.state)
         # expansion
         self.mcts.expand_leaf(leaf, pi)
         # backpropagation

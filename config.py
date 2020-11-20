@@ -12,7 +12,7 @@ EPSILON = 0.2
 ALPHA = 0.8
 TIMEOUT = 60
 
-# NETWORK TRAINING
+# NETWORK TRAINING AND HYPERPARAMETERS
 BATCH_SIZE = 256
 EPOCHS = 5
 REG_CONST = 0.0001
@@ -27,6 +27,6 @@ HIDDEN_LAYERS = [
     {'filters': 128, 'kernel_size': 3},
     {'filters': 128, 'kernel_size': 3},
     {'filters': 128, 'kernel_size': 3},
-    {'filters': 128, 'kernel_size': 3},
-    {'filters': 128, 'kernel_size': 3}
 ]
+
+TOTAL_ITERATIONS = 5

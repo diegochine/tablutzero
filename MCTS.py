@@ -2,6 +2,7 @@ import numpy as np
 
 from pytablut.game import State
 import pytablut.loggers as lg
+import pytablut.config as cfg
 
 logger = lg.logger_mcts
 
@@ -41,10 +42,11 @@ class Edge:
 
 class MCTS:
 
-    def __init__(self, player, root: Node):
+    def __init__(self, player, root: Node, c_puct: float = cfg.CPUCT):
         self.player = player
         self.root: Node = root
         self.tree = {root.id: root}
+        self.c_puct = c_puct
         self.expand_leaf(self.root)
 
     def change_root(self, state: State) -> None:
