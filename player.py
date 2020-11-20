@@ -42,9 +42,9 @@ class Player:
     def simulate(self) -> None:
         # selection
         leaf, path = self.mcts.select_leaf()
+        pi, v = self.nn.predict(leaf.state)
         # expansion
-        self.mcts.expand_leaf(leaf)
-        # random playout
-        score = self.mcts.random_playout(leaf)
+        self.mcts.expand_leaf(leaf, pi)
         # backpropagation
-        self.mcts.backpropagation(score, path)
+        self.mcts.backpropagation(v, path)
+

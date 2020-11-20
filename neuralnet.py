@@ -184,3 +184,45 @@ class ResidualNN(NeuralNetwork):
         converted = state.convert_into_cnn()
         model_input = np.reshape(converted, self.input_shape)
         return model_input
+
+    def predict(self, state):
+        input_to_model = np.array([self.state_to_model_input(state)])
+
+        preds = self.model.predict(input_to_model)
+        value_array = preds[0]
+        logits_array = preds[1]
+        value = value_array[0]
+        # FIXME sarà giusto? diego dice di fare reshape da 1x9x9x32 a 9x9x32
+        logits = logits_array.reshape(self.output_shape)
+
+        allowed_actions = self.map_actions(state.actions)
+
+        logits[np.logical_not(logits, allowed_actions)] = -100
+
+        # SOFTMAX
+        odds = np.exp(logits)
+        probs = odds / np.sum(odds)
+
+        return value, probs, allowed_actions
+
+    def map_actions(self, logits, actions):
+        # HOWTO understanding the output mapping
+        # 32 levels in 2 groups of 16
+        # every group is one axis: rows, columns (with this order)
+        # the first layer of every group represents moving by -8 cells on that axis
+        # the last layer of every group represents moving by +8 cells on that axis
+        mask = np.full(logits.shape, False, dtype=bool)
+        for a_from, a_to in actions:
+            distance_x, distance_y = np.subtract(a_to, a_from)
+            if distance_x != 0:
+                # up or down
+                offset = 8
+                if distance_x > 0: # because when x=1 I want the 8th layer as x can't be 0
+                    offset = 7
+                # so distance_x + offset is my layer
+            else:
+                # left or right
+                offset = 24
+                if distance_y > 0:  # because when x=1 I want the 8th layer as x can't be 0
+                    offset = 23
+        return mask

@@ -79,7 +79,7 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node):
+    def expand_leaf(self, leaf: Node, pi):
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -100,7 +100,7 @@ class MCTS:
             state = state.transition_function(rnd_a)
         return state.value
 
-    def backpropagation(self, score: int, path: list):
+    def backpropagation(self, score: float, path: list):
         logger.info('PERFORMING BACKPROPAGATION')
         for edge in path:
             edge.N += 1
@@ -108,5 +108,5 @@ class MCTS:
             edge.Q = edge.W / edge.N
 
     def choose_action(self) -> tuple:
-        best_N = np.argmax([edge.N for edge in self.root.edges])
-        return self.root.edges[best_N].action
+        best_n = np.argmax([edge.N for edge in self.root.edges])
+        return self.root.edges[best_n].action
