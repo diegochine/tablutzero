@@ -81,7 +81,7 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, pi):
+    def expand_leaf(self, leaf: Node, pi, action_map):
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
