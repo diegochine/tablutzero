@@ -48,9 +48,9 @@ class Player:
     def simulate(self) -> None:
         # selection
         leaf, path = self.mcts.select_leaf()
-        v, p, action_map = self.brain.predict(leaf.state)
+        v, p = self.brain.predict(leaf.state)
         # expansion
-        self.mcts.expand_leaf(leaf, p, action_map)
+        self.mcts.expand_leaf(leaf, p)
         # backpropagation
         self.mcts.backpropagation(v, path)
 

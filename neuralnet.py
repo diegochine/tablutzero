@@ -8,7 +8,6 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten, BatchNormalization, 
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
 
-from pytablut.utils import Map
 import pytablut.config as cfg
 import pytablut.loggers as lg
 
@@ -187,14 +186,9 @@ class ResidualNN(NeuralNetwork):
         return model_input
 
     def predict(self, state):
-        """ Per il training : mi faccio un nd array 9 9 32 tutto a -100
-            e fillo gli indici delle azioni valide con le predizioni
-            perché il tutto va salvato per registrare i dati su cui allenarsi
-
-            Per la competizione :  ritorno direttamente solo un dizionario
-            azione (da, a) --> predizione
+        """ Returns the value of the action and a dictionary for actions
+            action (from, to) --> prediction
         """
-        # TODO avere parametro che mi indica se sono in training o no
         input_to_model = np.array([self.state_to_model_input(state)])
 
         preds = self.model.predict(input_to_model)
@@ -204,22 +198,17 @@ class ResidualNN(NeuralNetwork):
         # FIXME sarà giusto? diego dice di fare reshape da 1x9x9x32 a 9x9x32
         logits = logits_array.reshape(self.output_shape)
 
-        action_position = self.map_actions(state.actions)
-
-        to_be_saved = np.full(self.output_shape, -100)
-        for index in action_position.get_keys(3):
-            to_be_saved[index] = logits[index]
+        predictions = self.map_actions(logits, state.actions)
 
         # SOFTMAX
-        odds = np.exp(to_be_saved)
+        odds = np.exp(predictions)
         probs = odds / np.sum(odds)
 
-        return value, probs, action_position
+        actions_predictions = {state.actions[i]: probs[i] for i in range(len(state.actions))}
+        return value, actions_predictions
 
-    def map_actions(self, actions):
-        # TODO avere parametro che mi indica se sono in training o no
-        ''' Returns a one to one dictionary that maps an action with
-            the coordinates of the nn output
+    def map_actions(self, logits, actions):
+        ''' Returns an array of the predicted values of the actions
 
             Understanding the output mapping:
             32 levels in 2 groups of 16,
@@ -227,8 +216,8 @@ class ResidualNN(NeuralNetwork):
             the first layer of every group represents moving by -8 cells on that axis
             the last layer of every group represents moving by +8 cells on that axis
         '''
-        the_map = Map()
-        for a_from, a_to in actions:
+        pred = np.empty(len(actions), dtype=float)
+        for i, (a_from, a_to) in enumerate(actions):
             distance_x, distance_y = np.subtract(a_to, a_from)
             if distance_x != 0:
                 # up or down
@@ -245,5 +234,5 @@ class ResidualNN(NeuralNetwork):
                 layer = distance_y + offset
 
             idx = (a_from[0], a_from[1], layer)
-            the_map[(a_from, a_to)] = idx
-        return the_map
+            pred[i] = logits[idx]
+        return pred

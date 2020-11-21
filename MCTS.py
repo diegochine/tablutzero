@@ -81,7 +81,7 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, p, action_map):
+    def expand_leaf(self, leaf: Node, p):
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -89,7 +89,7 @@ class MCTS:
                 self.add_node(new_leaf)
             else:
                 new_leaf = self.tree[next_state.id]
-            new_edge = Edge(leaf, new_leaf, action, p[action_map[action]])
+            new_edge = Edge(leaf, new_leaf, action, p[action])
             leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):

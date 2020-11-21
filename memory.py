@@ -11,10 +11,10 @@ logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 
 class Memory():
 
-    def __init__(self, MEMORY_SIZE=cfg.MEMORY_SIZE):
+    def __init__(self, size=cfg.MEMORY_SIZE):
         self.MEMORY_SIZE = cfg.MEMORY_SIZE
-        self.ltmemory = deque(maxlen=MEMORY_SIZE)
-        self.stmemory = deque(maxlen=MEMORY_SIZE)
+        self.ltmemory = deque(maxlen=size)
+        self.stmemory = deque(maxlen=size)
 
     def commit_stmemory(self, state, pi, value):
         logger.info('ADDING NEW STATE')
@@ -24,9 +24,12 @@ class Memory():
                               'value': value,
                               'playerTurn': state.turn})
 
-    def commit_ltmemory(self, value):
+    def commit_ltmemory(self, winner):
         for i in self.stmemory:
-            i['value'] = value
+            if i['playerTurn'] == winner:
+                i['value'] = winner
+            else:
+                i['value'] = -winner
             self.ltmemory.append(i)
         self.clear_stmemory()
 
