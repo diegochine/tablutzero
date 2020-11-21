@@ -156,25 +156,25 @@ class State:
 
     def _check_enemy_capture(self, board: np.ndarray, arrival: tuple, enemy: int):
         row_to, col_to = arrival
-        if col_to < board.shape[1] - 2 and board[row_to, col_to + 1] == enemy:
+        if col_to < board.shape[1] - 2 and board[row_to, col_to + 1] == enemy and (row_to, col_to + 1) not in Game.citadels:
             # on the right there's an enemy
             over_the_enemy = (row_to, col_to + 2)
             if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
                 # remove the checker
                 board[row_to, col_to + 1] = 0
-        if col_to > 1 and board[row_to, col_to - 1] == enemy:
+        if col_to > 1 and board[row_to, col_to - 1] == enemy and (row_to, col_to - 1) not in Game.citadels:
             # on the left there's an enemy
             over_the_enemy = (row_to, col_to - 2)
             if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
                 # remove the checker
                 board[row_to, col_to - 1] = 0
-        if row_to > 1 and board[row_to - 1, col_to] == enemy:
+        if row_to > 1 and board[row_to - 1, col_to] == enemy and (row_to - 1, col_to) not in Game.citadels:
             # above there's an enemy
             over_the_enemy = (row_to - 2, col_to)
             if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
                 # remove the checker
                 board[row_to - 1, col_to] = 0
-        if row_to < board.shape[0] - 2 and board[row_to + 1, col_to] == enemy:
+        if row_to < board.shape[0] - 2 and board[row_to + 1, col_to] == enemy and (row_to + 1, col_to) not in Game.citadels:
             # below there's an enemy
             over_the_enemy = (row_to + 2, col_to)
             if board[over_the_enemy] == self.turn or over_the_enemy in Game.citadels:
