@@ -52,6 +52,7 @@ class Player:
         """
         Performs one monte carlo simulation, using the neural network to evaluate the leaves
         """
+        lg.logger_player.info('PERFORMING SIMULATION')
         # selection
         leaf, path = self.mcts.select_leaf()
         v, p = self.brain.predict(leaf.state)
@@ -65,7 +66,7 @@ class Player:
         Retrain the network using the given memories
         :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'pi
         """
-        lg.logger_player.info('******RETRAINING MODEL******')
+        lg.logger_player.info('RETRAINING MODEL')
 
         for i in range(cfg.TRAINING_LOOPS):
             minibatch = np.random.sample(memories, min(cfg.BATCH_SIZE, len(memories)))
@@ -74,5 +75,5 @@ class Player:
             y = {'value_head': np.array([memory['value'] for memory in minibatch]),
                  'policy_head': np.array([memory['pi'] for memory in minibatch])}
 
-            loss = self.brain.fit(X, y, epochs=cfg.EPOCHS, verbose=cfg.VERBOSE, validation_split=0)
-            lg.logger_player.info('NEW LOSS {}'.format(loss.history))
+            loss = self.brain.fit(X, y, epochs=cfg.EPOCHS, verbose=cfg.VERBOSE, validation_split=0, batch_size=32)
+            lg.logger_player.info('ITERATION {:3d}/{:3d}, LOSS {}'.format(i, cfg.TRAINING_LOOPS, loss.history))

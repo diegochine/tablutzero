@@ -32,10 +32,10 @@ class Edge:
         self.in_node: Node = in_node
         self.out_node: Node = out_node
         self.action: tuple = action
-        self.N = 0  # number of times action has been taken from initial state
-        self.W = 0  # total value of next state
-        self.Q = 0  # mean value of next state
-        self.P = p  # prior probability of selecting this action
+        self.N = 0   # number of times action has been taken from initial state
+        self.W = 0.  # total value of next state
+        self.Q = 0.  # mean value of next state
+        self.P = p   # prior probability of selecting this action
 
 
 class MCTS:
@@ -64,7 +64,7 @@ class MCTS:
             max_QU = -np.inf
             N = np.sum([edge.N for edge in node.edges])
             simulation_edge = None
-            lg.logger_mcts.info('PLAYER TURN {}', node.state.turn)
+            lg.logger_mcts.info('PLAYER TURN {}'.format(node.state.turn))
 
             if node.id == self.root.id:
                 epsilon = cfg.EPSILON
@@ -74,11 +74,16 @@ class MCTS:
                 nu = [0] * len(node.edges)
 
             for i, edge in enumerate(node.edges):
+                lg.logger_mcts.info('EVALUATING ACTION: {}'.format(edge.action))
+
                 U = self.c_puct * \
                     ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
                     np.sqrt(N) / (1 + edge.N)
                 Q = edge.Q
+                lg.logger_mcts.info('Q: {}, U: {}'.format(edge.Q, U))
+
                 if Q+U > max_QU:
+                    lg.logger_mcts.info('UPDATING SIMULATION EDGE')
                     max_QU = Q+U
                     simulation_edge = edge
 
@@ -89,8 +94,10 @@ class MCTS:
         return node, path
 
     def expand_leaf(self, leaf: Node, p=None):
-        if p is None:
-            p = np.zeros(len(leaf.state.actions))
+        lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
+        if p is None or True:
+            # TODO handles root, should be improved
+            p = {act: np.random.uniform() for act in leaf.state.actions}
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -98,6 +105,7 @@ class MCTS:
                 self.add_node(new_leaf)
             else:
                 new_leaf = self.tree[next_state.id]
+            lg.logger_mcts.info('ADDING NEW CHILD, ACTION = {}, p = {}'.format(action, p[action]))
             new_edge = Edge(leaf, new_leaf, action, p[action])
             leaf.edges.append(new_edge)
 
@@ -112,15 +120,17 @@ class MCTS:
         return state.value
 
     def backpropagation(self, v: float, path: list):
-        lg.logger_mcts.info('PERFORMING BACKPROPAGATION')
+        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v))
         direction = -1
         for edge in path:
             edge.N += 1
             edge.W += v * direction
             direction *= -1
             edge.Q = edge.W / edge.N
+            lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
 
     def choose_action(self) -> tuple:
-        lg.logger_mcts.info()
         best_n = np.argmax([edge.N for edge in self.root.edges])
-        return self.root.edges[best_n].action
+        action = self.root.edges[best_n].action
+        lg.logger_mcts.info('COMPUTED ACTION: {}'.format(action))
+        return action

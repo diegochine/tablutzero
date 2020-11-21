@@ -3,7 +3,7 @@ import logging
 
 def setup_logger(name, file, level=logging.INFO):
     formatter = logging.Formatter('{asctime} {levelname} {message}', style='{')
-    file_handler = logging.FileHandler(file)
+    file_handler = logging.FileHandler(file, mode='w')
     file_handler.setFormatter(formatter)
 
     logger = logging.getLogger(name)
