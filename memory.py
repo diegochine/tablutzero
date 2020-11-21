@@ -17,6 +17,13 @@ class Memory():
         self.stmemory = deque(maxlen=size)
 
     def commit_stmemory(self, state, pi, value):
+        """
+
+        :param state: State object
+        :param pi: search probabilities
+        :param value: value of the state
+        :return:
+        """
         logger.info('ADDING NEW STATE')
         self.stmemory.append({'state': state,
                               'id': state.id,

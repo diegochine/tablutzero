@@ -33,7 +33,7 @@ for i in range(cfg.TOTAL_ITERATIONS):
     logger.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(i, cfg.TOTAL_ITERATIONS))
     logger.info('SELF PLAYING FOR {:d} EPISODES'.format(cfg.EPISODES))
 
-    black.brain
+    # TODO make sure both players have the same weight
 
     for episode in range(cfg.EPISODES):
         logger.info('EPISODE {:4d}')

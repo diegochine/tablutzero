@@ -4,8 +4,6 @@ from pytablut.game import State
 import pytablut.loggers as lg
 import pytablut.config as cfg
 
-logger = lg.logger_mcts
-
 
 class Node:
 
@@ -58,30 +56,41 @@ class MCTS:
         self.tree[node.id] = node
 
     def select_leaf(self) -> (Node, list):
-        c = np.sqrt(2)
+        lg.logger_mcts.info('SELECTING LEAF')
         node = self.root
         path = []
 
         while not node.is_leaf():
-            max_uct = -np.inf
+            max_QU = -np.inf
             N = np.sum([edge.N for edge in node.edges])
             simulation_edge = None
+            lg.logger_mcts.info('PLAYER TURN {}', node.state.turn)
 
-            for edge in node.edges:
-                if edge.N == 0:
-                    uct = np.inf
-                else:
-                    uct = edge.Q + np.sqrt(c) * np.sqrt(np.log(N) / edge.N)
-                if uct > max_uct:
-                    max_uct = uct
+            if node.id == self.root.id:
+                epsilon = cfg.EPSILON
+                nu = np.random.dirichlet([cfg.ALPHA] * len(node.edges))
+            else:
+                epsilon = 0
+                nu = [0] * len(node.edges)
+
+            for i, edge in enumerate(node.edges):
+                U = self.c_puct * \
+                    ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
+                    np.sqrt(N) / (1 + edge.N)
+                Q = edge.Q
+                if Q+U > max_QU:
+                    max_QU = Q+U
                     simulation_edge = edge
-            next_state = node.state.transition_function(simulation_edge.action)
+
+            # next_state = node.state.transition_function(simulation_edge.action)
             node = simulation_edge.out_node
             path.append(simulation_edge)
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, p):
+    def expand_leaf(self, leaf: Node, p=None):
+        if p is None:
+            p = np.zeros(len(leaf.state.actions))
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -93,7 +102,7 @@ class MCTS:
             leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):
-        logger.info('PERFORMING RANDOM PLAYOUT')
+        lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
         state = leaf.state
         while not state.is_terminal:
             acts = state.actions
@@ -103,7 +112,7 @@ class MCTS:
         return state.value
 
     def backpropagation(self, v: float, path: list):
-        logger.info('PERFORMING BACKPROPAGATION')
+        lg.logger_mcts.info('PERFORMING BACKPROPAGATION')
         direction = -1
         for edge in path:
             edge.N += 1
@@ -112,6 +121,6 @@ class MCTS:
             edge.Q = edge.W / edge.N
 
     def choose_action(self) -> tuple:
-        logger.info()
+        lg.logger_mcts.info()
         best_n = np.argmax([edge.N for edge in self.root.edges])
         return self.root.edges[best_n].action

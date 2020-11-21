@@ -132,6 +132,11 @@ class State:
         return actions
 
     def transition_function(self, action: tuple):
+        """
+        Given an action, returns the state resulting from applying the action to this state
+        :param action: tuple ((x_from, y_from), (x_to, y_to))
+        :return: State object with updated board and turn
+        """
         pos_start, pos_end = action
         board = self.board.copy()
         board[pos_start], board[pos_end] = board[pos_end], board[pos_start]
@@ -177,7 +182,11 @@ class State:
                 board[row_to + 1, col_to] = 0
         return board
 
-    def convert_into_cnn(self):
+    def convert_into_cnn(self) -> np.array:
+        """
+        Converts this state as input for the neural network
+        :return: np.array of shape (9x9x4)
+        """
         black = np.where(self.board == -1, 1, 0)
         white = np.where(self.board == 1, 1, 0)
         king = np.where(self.board == 2, 1, 0)

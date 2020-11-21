@@ -9,7 +9,8 @@ from pytablut.neuralnet import ResidualNN
 
 class Player:
 
-    def __init__(self, color, name, nnet, timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS):
+    def __init__(self, color, name, nnet,
+                 timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS, c_puct=cfg.CPUCT):
         """
         :param color: color of the player, either BLACK or WHITE
         :param name: name of the player
@@ -24,14 +25,16 @@ class Player:
             raise ValueError('timeout must be >0')
         self.mcts = None
         self.simulations = simulations
+        self.c_puct = c_puct
         self.game_over = False
-        self.brain : ResidualNN = nnet
+        self.brain: ResidualNN = nnet
 
     def build_mcts(self, state):
-        self.mcts = MCTS(self.color, Node(state))
+        self.mcts = MCTS(self.color, Node(state), self.c_puct)
 
     def act(self, state):
-        """ computes best action based on given state"""
+        """ computes best action based on given state
+        """
         if self.mcts is None or hash(state) not in self.mcts.tree:
             self.build_mcts(state)
         else:
@@ -46,6 +49,9 @@ class Player:
         return action
 
     def simulate(self) -> None:
+        """
+        Performs one monte carlo simulation, using the neural network to evaluate the leaves
+        """
         # selection
         leaf, path = self.mcts.select_leaf()
         v, p = self.brain.predict(leaf.state)
@@ -54,7 +60,11 @@ class Player:
         # backpropagation
         self.mcts.backpropagation(v, path)
 
-    def replay(self, memories):
+    def replay(self, memories) -> None:
+        """
+        Retrain the network using the given memories
+        :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'pi
+        """
         lg.logger_player.info('******RETRAINING MODEL******')
 
         for i in range(cfg.TRAINING_LOOPS):
