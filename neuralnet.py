@@ -186,8 +186,8 @@ class ResidualNN(NeuralNetwork):
         return model_input
 
     def predict(self, state):
-        """ Returns the value of the action and a dictionary for actions
-            action (from, to) --> prediction
+        """
+            :return: the value of the action and a dictionary for actions (from, to) --> prediction
         """
         input_to_model = np.array([self.state_to_model_input(state)])
 
@@ -208,14 +208,15 @@ class ResidualNN(NeuralNetwork):
         return value, actions_predictions
 
     def map_actions(self, logits, actions):
-        ''' Returns an array of the predicted values of the actions
+        """
+        :return: an array of the predicted values of the actions
 
-            Understanding the output mapping:
-            32 levels in 2 groups of 16,
-            every group is one axis: rows, columns (with this order)
-            the first layer of every group represents moving by -8 cells on that axis
-            the last layer of every group represents moving by +8 cells on that axis
-        '''
+        Understanding the output mapping:
+        32 levels in 2 groups of 16,
+        every group is one axis: rows, columns (with this order):
+            - the first layer of every group represents moving by -8 cells on that axis
+            - the last layer of every group represents moving by +8 cells on that axis
+        """
         pred = np.empty(len(actions), dtype=float)
         for i, (a_from, a_to) in enumerate(actions):
             distance_x, distance_y = np.subtract(a_to, a_from)
