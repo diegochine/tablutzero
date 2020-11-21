@@ -18,6 +18,7 @@ memory = Memory(cfg.MEMORY_SIZE)
 
 # CREATE (AND EVENTUALLY LOAD) NETWORKS
 general_nn = ResidualNN()
+prototype_nn = ResidualNN()
 logger.info('LOADED NETWORK')
 
 # CREATE PLAYERS
@@ -32,23 +33,27 @@ for i in range(cfg.TOTAL_ITERATIONS):
     logger.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(i, cfg.TOTAL_ITERATIONS))
     logger.info('SELF PLAYING FOR {:d} EPISODES'.format(cfg.EPISODES))
 
+    black.brain
+
     for episode in range(cfg.EPISODES):
         logger.info('EPISODE {:4d}')
         game = Game()
         while not game.current_state.is_terminal:
             print(game.current_state.board, '\n')
-            # TODO save memories
             if game.current_player == 1:
                 turn = 'WHITE'
-                act = white.act(game.current_state)
+                act, pi = white.act(game.current_state)
             else:
                 turn = 'BLACK'
-                act = black.act(game.current_state)
+                act, pi = black.act(game.current_state)
             logger.info('{} TURN, ACTION: {}'.format(turn, act))
+            memory.commit_stmemory(game.current_state, pi, None)
             game.execute(act)
         logger.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[game.current_state.value]))
+        memory.commit_ltmemory(-game.current_state.turn)
 
-    # TODO retrain
+    logger.info('RETRAINING NETWORK')
+    white.replay(memory)
+    white.brain.save('general', i)
 
     # TODO evaluate network
-

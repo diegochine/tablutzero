@@ -8,22 +8,21 @@ logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 logger.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
 logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 
+
 class Memory():
 
-    def __init__(self, MEMORY_SIZE):
-        self.MEMORY_SIZE = config.MEMORY_SIZE
-        self.ltmemory = deque(maxlen=config.MEMORY_SIZE)
-        self.stmemory = deque(maxlen=config.MEMORY_SIZE)
+    def __init__(self, MEMORY_SIZE=cfg.MEMORY_SIZE):
+        self.MEMORY_SIZE = cfg.MEMORY_SIZE
+        self.ltmemory = deque(maxlen=MEMORY_SIZE)
+        self.stmemory = deque(maxlen=MEMORY_SIZE)
 
     def commit_stmemory(self, state, pi, value):
         logger.info('ADDING NEW STATE')
-        self.stmemory.append({
-            'board': state.board
-            , 'id': state.id
-            , 'pi': pi
-            , 'value': value
-            , 'playerTurn': state.turn
-        })
+        self.stmemory.append({'state': state,
+                              'id': state.id,
+                              'pi': pi,
+                              'value': value,
+                              'playerTurn': state.turn})
 
     def commit_ltmemory(self, value):
         for i in self.stmemory:

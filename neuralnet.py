@@ -187,14 +187,14 @@ class ResidualNN(NeuralNetwork):
         return model_input
 
     def predict(self, state):
-        # TODO avere parametro che mi indica se sono in training o no
-        ''' Per il training : mi faccio un nd array 9 9 32 tutto a -100
+        """ Per il training : mi faccio un nd array 9 9 32 tutto a -100
             e fillo gli indici delle azioni valide con le predizioni
             perché il tutto va salvato per registrare i dati su cui allenarsi
 
             Per la competizione :  ritorno direttamente solo un dizionario
             azione (da, a) --> predizione
-        '''
+        """
+        # TODO avere parametro che mi indica se sono in training o no
         input_to_model = np.array([self.state_to_model_input(state)])
 
         preds = self.model.predict(input_to_model)

@@ -24,7 +24,7 @@ class Node:
 
 class Edge:
 
-    def __init__(self, in_node: Node, out_node: Node, action):
+    def __init__(self, in_node: Node, out_node: Node, action, p):
         """
         each edge represents an action from a state to another
         :param in_node: node of the initial state
@@ -37,7 +37,7 @@ class Edge:
         self.N = 0  # number of times action has been taken from initial state
         self.W = 0  # total value of next state
         self.Q = 0  # mean value of next state
-        # self.P = p  # prior probability of selecting this action
+        self.P = p  # prior probability of selecting this action
 
 
 class MCTS:
@@ -81,7 +81,7 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, pi, action_map):
+    def expand_leaf(self, leaf: Node, p, action_map):
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -89,7 +89,7 @@ class MCTS:
                 self.add_node(new_leaf)
             else:
                 new_leaf = self.tree[next_state.id]
-            new_edge = Edge(leaf, new_leaf, action)
+            new_edge = Edge(leaf, new_leaf, action, p[action_map[action]])
             leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):
@@ -102,13 +102,16 @@ class MCTS:
             state = state.transition_function(rnd_a)
         return state.value
 
-    def backpropagation(self, score: float, path: list):
+    def backpropagation(self, v: float, path: list):
         logger.info('PERFORMING BACKPROPAGATION')
+        direction = -1
         for edge in path:
             edge.N += 1
-            edge.W += score
+            edge.W += v * direction
+            direction *= -1
             edge.Q = edge.W / edge.N
 
     def choose_action(self) -> tuple:
+        logger.info()
         best_n = np.argmax([edge.N for edge in self.root.edges])
         return self.root.edges[best_n].action
