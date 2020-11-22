@@ -93,11 +93,8 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, p=None):
+    def expand_leaf(self, leaf: Node, p):
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
-        if p is None:
-            # TODO handles root, should be improved
-            p = {act: 0 for act in leaf.state.actions}
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -127,9 +124,3 @@ class MCTS:
             direction *= -1
             edge.Q = edge.W / edge.N
             lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
-
-    def choose_action(self) -> tuple:
-        best_n = np.argmax([edge.N for edge in self.root.edges])
-        action = self.root.edges[best_n].action
-        lg.logger_mcts.info('COMPUTED ACTION: {}'.format(action))
-        return action

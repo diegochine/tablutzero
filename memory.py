@@ -16,6 +16,9 @@ class Memory():
         self.ltmemory = deque(maxlen=size)
         self.stmemory = deque(maxlen=size)
 
+    def __len__(self):
+        return len(self.ltmemory)
+
     def commit_stmemory(self, state, pi, value):
         """
 

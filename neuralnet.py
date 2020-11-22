@@ -235,3 +235,31 @@ class ResidualNN(NeuralNetwork):
             idx = (a_from[0], a_from[1], layer)
             pred[i] = logits[idx]
         return pred
+
+    def map_into_action_space(self, actions, pi):
+        actions_space = np.full(self.output_shape, -100, dtype=float)
+        for i, (a_from, a_to) in enumerate(actions):
+            distance_x, distance_y = np.subtract(a_to, a_from)
+            if distance_x != 0:
+                # up or down
+                offset = 8
+                if distance_x > 0:  # because when x=1 I want the 8th layer as x can't be 0
+                    offset = 7
+                # so distance_x + offset is my layer
+                layer = distance_x + offset
+            else:
+                # left or right
+                offset = 24
+                if distance_y > 0:  # because when x=1 I want the 8th layer as x can't be 0
+                    offset = 23
+                layer = distance_y + offset
+
+            idx = (a_from[0], a_from[1], layer)
+            actions_space[idx] = pi[i]
+        return actions_space
+
+    def set_weights(self, weights):
+        self.model.set_weights(weights)
+
+    def get_weights(self):
+        return self.model.get_weights()

@@ -33,7 +33,7 @@ for i in range(cfg.TOTAL_ITERATIONS):
     logger.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(i, cfg.TOTAL_ITERATIONS))
     logger.info('SELF PLAYING FOR {:d} EPISODES'.format(cfg.EPISODES))
 
-    # TODO make sure both players have the same weight
+    black.brain.set_weights(white.brain.get_weights())
 
     for episode in range(cfg.EPISODES):
         logger.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
@@ -50,10 +50,13 @@ for i in range(cfg.TOTAL_ITERATIONS):
             memory.commit_stmemory(game.current_state, pi, None)
             game.execute(act)
         logger.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[game.current_state.value]))
-        memory.commit_ltmemory(-game.current_state.turn)
+        if game.current_state.value == 0:  # it's a draw
+            memory.commit_ltmemory(0)
+        else:  # the player of this turn has lost
+            memory.commit_ltmemory(-game.current_state.turn)
 
     logger.info('RETRAINING NETWORK')
-    white.replay(memory)
+    white.replay(memory.ltmemory)
     white.brain.save('general', i)
 
     # TODO evaluate network
