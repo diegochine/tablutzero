@@ -45,10 +45,11 @@ class MCTS:
         self.root: Node = root
         self.tree = {root.id: root}
         self.c_puct = c_puct
-        self.expand_leaf(self.root, p_root)
+        self.new_root(self.root.state, p_root)
 
-    def change_root(self, state: State, p) -> None:
-        self.root = self.tree[state.id]
+    def new_root(self, state: State, p) -> None:
+        if self.root.state.id != state.id:
+            self.root = self.tree[state.id]
         if self.root.is_leaf():
             self.expand_leaf(self.root, p)
 

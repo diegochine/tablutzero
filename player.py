@@ -24,29 +24,46 @@ class Player:
         self.simulations: int = simulations
         self.c_puct: int = c_puct
         self.game_over: bool = False
-        self.tau = turns_before_tau0
+        self.turns_before_tau0 = turns_before_tau0
+        self.tau = tau
+        self.turn = 1
 
-    def build_mcts(self, state, p_root):
-        self.mcts = MCTS(self.color, Node(state), p_root, self.c_puct)
+    def build_mcts(self, state, p):
+        """"""
+        lg.logger_player.info("BUILDING MCTS, P VALUES:")
+        lg.logger_player.info(p)
+        if self.mcts is None or hash(state) not in self.mcts.tree:
+            self.mcts = MCTS(self.color, Node(state), p, self.c_puct)
+        else:
+            self.mcts.new_root(state, p)
 
     def act(self, state):
-        """ computes best action based on given state
         """
+        computes best action based on given state
+        :return tuple (action, pi)
+        """
+        lg.logger_player.info("COMPUTING ACTION FOR STATE {}".format(state.id))
         v, p = self.brain.predict(state)
-        if self.mcts is None or hash(state) not in self.mcts.tree:
-            self.build_mcts(state, p)
-        else:
-            self.mcts.change_root(state, p)
+        self.build_mcts(state, p)
 
+        lg.logger_player.debug("size of the tree (start): {}".format(len(self.mcts.tree)))
         # time to roll
         for sim in range(self.simulations):
+            if sim % 50 == 0:
+                lg.logger_player.info('{:3d} SIMULATIONS PERFORMED')
             self.simulate()
+        lg.logger_player.debug("size of the tree (end)  : {}".format(len(self.mcts.tree)))
 
         action, pi = self.choose_action()
 
         return action, pi
 
     def choose_action(self) -> tuple:
+        """
+        Chooses the best action from the current state,
+        either deterministically or stochastically
+        :return: tuple (action, pi), pi are normalized probabilities
+        """
         pi = np.array([edge.N for edge in self.mcts.root.edges])
         if self.tau == 0:
             act_idx = np.argmax(pi)
@@ -65,7 +82,6 @@ class Player:
         """
         Performs one monte carlo simulation, using the neural network to evaluate the leaves
         """
-        lg.logger_player.info('PERFORMING SIMULATION')
         # selection
         leaf, path = self.mcts.select_leaf()
         v, p = self.brain.predict(leaf.state)
@@ -83,10 +99,12 @@ class Player:
 
         for i in range(cfg.TRAINING_LOOPS):
             minibatch = np.random.choice(memories, min(cfg.BATCH_SIZE, len(memories)))
-
+            pi = [self.brain.map_into_action_space(actions, pi)
+                  for actions, pi in zip([memory['state'].actions for memory in minibatch],
+                                         [memory['pi'] for memory in minibatch])]
             X = np.array([memory['state'].convert_into_cnn() for memory in minibatch])
             y = {'value_head': np.array([memory['value'] for memory in minibatch]),
-                 'policy_head': np.array([memory['pi'] for memory in minibatch])}
+                 'policy_head': np.array(pi)}
 
             loss = self.brain.fit(X, y, epochs=cfg.EPOCHS, verbose=cfg.VERBOSE,
                                   validation_split=0, batch_size=minibatch.size)

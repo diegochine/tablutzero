@@ -34,14 +34,17 @@ class NeuralNetwork:
         return self.model.predict(X)
 
     def fit(self, X, y, epochs, verbose, validation_split, batch_size):
+        lg.logger_nnet.info('FITTING MODEL, {} EPOCHS'.format(epochs))
         self.model.fit(X, y, epochs=epochs, verbose=verbose,
                        validation_split=validation_split, batch_size=batch_size)
 
     def save(self, color, version):
+        lg.logger_nnet.info('SAVING MODEL {}{:2d}'.format(color, version))
         self.model.save('models/{}_version{}.h5'.format(color, version))
 
-    def load_model(self, version):
-        return load_model('models/version{}.h5'.format(version))
+    def load_model(self, color, version):
+        lg.logger_nnet.info('LOADING MODEL {}{:2d}'.format(color, version))
+        return load_model('models/{}version{}.h5'.format(color, version))
 
     def printWeightAverages(self):
         layers = self.model.layers
