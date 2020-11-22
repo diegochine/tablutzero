@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import Input
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU, Reshape, add
 from tensorflow.keras.models import Model, load_model
@@ -15,7 +16,7 @@ logger = lg.logger_nnet
 
 def loss_with_action_masking(y_true, y_pred):
     logits = y_true
-    labels = np.where(y_true == 0, -100, y_pred)
+    labels = tf.where(y_true == 0., -100., y_pred)
     return softmax_cross_entropy_with_logits(labels=labels, logits=logits)
 
 
@@ -35,8 +36,8 @@ class NeuralNetwork:
 
     def fit(self, X, y, epochs, verbose, validation_split, batch_size):
         lg.logger_nnet.info('FITTING MODEL, {} EPOCHS'.format(epochs))
-        self.model.fit(X, y, epochs=epochs, verbose=verbose,
-                       validation_split=validation_split, batch_size=batch_size)
+        return self.model.fit(X, y, epochs=epochs, verbose=verbose,
+                              validation_split=validation_split, batch_size=batch_size)
 
     def save(self, color, version):
         lg.logger_nnet.info('SAVING MODEL {}{:2d}'.format(color, version))
@@ -224,7 +225,7 @@ class ResidualNN(NeuralNetwork):
             if distance_x != 0:
                 # up or down
                 offset = 8
-                if distance_x > 0: # because when x=1 I want the 8th layer as x can't be 0
+                if distance_x > 0:  # because when x=1 I want the 8th layer as x can't be 0
                     offset = 7
                 # so distance_x + offset is my layer
                 layer = distance_x + offset

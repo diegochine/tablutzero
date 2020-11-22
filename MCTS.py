@@ -65,7 +65,7 @@ class MCTS:
             max_QU = -np.inf
             N = np.sum([edge.N for edge in node.edges])
             simulation_edge = None
-            lg.logger_mcts.info('PLAYER TURN {}'.format(node.state.turn))
+            lg.logger_mcts.debug('PLAYER TURN {}'.format(node.state.turn))
 
             if node.id == self.root.id:
                 epsilon = cfg.EPSILON
@@ -75,16 +75,16 @@ class MCTS:
                 nu = [0] * len(node.edges)
 
             for i, edge in enumerate(node.edges):
-                lg.logger_mcts.info('EVALUATING ACTION: {}'.format(edge.action))
+                lg.logger_mcts.debug('EVALUATING ACTION: {}'.format(edge.action))
 
                 U = self.c_puct * \
                     ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
                     np.sqrt(N) / (1 + edge.N)
                 Q = edge.Q
-                lg.logger_mcts.info('Q: {}, U: {}'.format(edge.Q, U))
+                lg.logger_mcts.debug('Q: {}, U: {}'.format(edge.Q, U))
 
                 if Q+U > max_QU:
-                    lg.logger_mcts.info('UPDATING SIMULATION EDGE')
+                    lg.logger_mcts.debug('UPDATING SIMULATION EDGE')
                     max_QU = Q+U
                     simulation_edge = edge
 

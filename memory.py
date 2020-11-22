@@ -1,4 +1,5 @@
 from collections import deque
+import pickle
 
 import config as cfg
 import loggers as lg
@@ -47,5 +48,5 @@ class Memory():
         logger.info('CLEANING MEMORY')
         self.stmemory.clear()
 
-    def save(self):
-        pass
+    def save(self, version):
+        pickle.dump(self.ltmemory, open('memories/mem{}.pkl'.format(version), 'wb'))

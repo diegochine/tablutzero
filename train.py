@@ -5,10 +5,9 @@ from memory import Memory
 from neuralnet import ResidualNN
 from player import Player
 
-logger = lg.logger_train
-logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
-logger.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
-logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
+lg.logger_train.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
+lg.logger_train.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
+lg.logger_train.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 
 # SETUP GAME
 endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
@@ -19,7 +18,7 @@ memory = Memory(cfg.MEMORY_SIZE)
 # CREATE (AND EVENTUALLY LOAD) NETWORKS
 general_nn = ResidualNN()
 prototype_nn = ResidualNN()
-logger.info('LOADED NETWORK')
+lg.logger_train.info('LOADED NETWORK')
 
 # CREATE PLAYERS
 white = Player(color='WHITE', name='dc', nnet=general_nn,
@@ -28,15 +27,15 @@ black = Player(color='BLACK', name='pd', nnet=general_nn,
                timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS)
 
 # START!
-logger.info('PLAYERS READY, STARTING MAIN LOOP')
-for i in range(cfg.TOTAL_ITERATIONS):
-    logger.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(i, cfg.TOTAL_ITERATIONS))
-    logger.info('SELF PLAYING FOR {:d} EPISODES'.format(cfg.EPISODES))
+lg.logger_train.info('PLAYERS READY, STARTING MAIN LOOP')
+for version in range(cfg.TOTAL_ITERATIONS):
+    lg.logger_train.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(version, cfg.TOTAL_ITERATIONS))
+    lg.logger_train.info('SELF PLAYING FOR {:d} EPISODES'.format(cfg.EPISODES))
 
     black.brain.set_weights(white.brain.get_weights())
 
     for episode in range(cfg.EPISODES):
-        logger.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
+        lg.logger_train.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
         game = Game()
         while not game.current_state.is_terminal:
             print(game.current_state.board, '\n')
@@ -46,17 +45,17 @@ for i in range(cfg.TOTAL_ITERATIONS):
             else:
                 turn = 'BLACK'
                 act, pi = black.act(game.current_state)
-            logger.info('{} TURN, ACTION: {}'.format(turn, act))
+            lg.logger_train.info('{} TURN, ACTION: {}'.format(turn, act))
             memory.commit_stmemory(game.current_state, pi, None)
             game.execute(act)
-        logger.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[game.current_state.value]))
+        lg.logger_train.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[game.current_state.value]))
         if game.current_state.value == 0:  # it's a draw
             memory.commit_ltmemory(0)
         else:  # the player of this turn has lost
             memory.commit_ltmemory(-game.current_state.turn)
-
-    logger.info('RETRAINING NETWORK')
+    memory.save(version)
+    lg.logger_train.info('RETRAINING NETWORK')
     white.replay(memory.ltmemory)
-    white.brain.save('general', i)
+    white.brain.save('general', version)
 
     # TODO evaluate network

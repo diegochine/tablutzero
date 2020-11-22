@@ -3,8 +3,8 @@ Configuration parameters
 """
 
 # PLAY AND SELF-PLAY
-EPISODES = 1
-MCTS_SIMULATIONS = 10
+EPISODES = 10
+MCTS_SIMULATIONS = 250
 MEMORY_SIZE = 10000
 TURNS_BEFORE_TAU0 = 15
 CPUCT = 1
@@ -24,6 +24,8 @@ IN_SHAPE = (9, 9, 4)
 OUT_SHAPE = (9, 9, 32)
 
 HIDDEN_LAYERS = [
+    {'filters': 128, 'kernel_size': 3},
+    {'filters': 128, 'kernel_size': 3},
     {'filters': 128, 'kernel_size': 3},
     {'filters': 128, 'kernel_size': 3},
     {'filters': 128, 'kernel_size': 3},

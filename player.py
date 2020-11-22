@@ -46,13 +46,13 @@ class Player:
         v, p = self.brain.predict(state)
         self.build_mcts(state, p)
 
-        lg.logger_player.debug("size of the tree (start): {}".format(len(self.mcts.tree)))
+        lg.logger_player.info("size of the tree (start): {}".format(len(self.mcts.tree)))
         # time to roll
         for sim in range(self.simulations):
             if sim % 50 == 0:
-                lg.logger_player.info('{:3d} SIMULATIONS PERFORMED')
+                lg.logger_player.info('{:3d} SIMULATIONS PERFORMED'.format(sim))
             self.simulate()
-        lg.logger_player.debug("size of the tree (end)  : {}".format(len(self.mcts.tree)))
+        lg.logger_player.info("size of the tree (end)  : {}".format(len(self.mcts.tree)))
 
         action, pi = self.choose_action()
 
