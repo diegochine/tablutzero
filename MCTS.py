@@ -1,8 +1,8 @@
 import numpy as np
 
-from pytablut.game import State
-import pytablut.loggers as lg
-import pytablut.config as cfg
+import config as cfg
+import loggers as lg
+from game import State
 
 
 class Node:
@@ -40,17 +40,17 @@ class Edge:
 
 class MCTS:
 
-    def __init__(self, player, root: Node, c_puct: float = cfg.CPUCT):
+    def __init__(self, player, root: Node, p_root, c_puct: float = cfg.CPUCT):
         self.player = player
         self.root: Node = root
         self.tree = {root.id: root}
         self.c_puct = c_puct
-        self.expand_leaf(self.root)
+        self.expand_leaf(self.root, p_root)
 
-    def change_root(self, state: State) -> None:
+    def change_root(self, state: State, p) -> None:
         self.root = self.tree[state.id]
         if self.root.is_leaf():
-            self.expand_leaf(self.root)
+            self.expand_leaf(self.root, p)
 
     def add_node(self, node: Node):
         self.tree[node.id] = node
@@ -95,9 +95,9 @@ class MCTS:
 
     def expand_leaf(self, leaf: Node, p=None):
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
-        if p is None or True:
+        if p is None:
             # TODO handles root, should be improved
-            p = {act: np.random.uniform() for act in leaf.state.actions}
+            p = {act: 0 for act in leaf.state.actions}
         for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -105,7 +105,6 @@ class MCTS:
                 self.add_node(new_leaf)
             else:
                 new_leaf = self.tree[next_state.id]
-            lg.logger_mcts.info('ADDING NEW CHILD, ACTION = {}, p = {}'.format(action, p[action]))
             new_edge = Edge(leaf, new_leaf, action, p[action])
             leaf.edges.append(new_edge)
 
@@ -120,7 +119,7 @@ class MCTS:
         return state.value
 
     def backpropagation(self, v: float, path: list):
-        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v))
+        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v[0]))
         direction = -1
         for edge in path:
             edge.N += 1

@@ -1,9 +1,9 @@
-import pytablut.config as cfg
-import pytablut.loggers as lg
-from pytablut.memory import Memory
-from pytablut.neuralnet import ResidualNN
-from pytablut.player import Player
-from pytablut.game import Game
+import config as cfg
+import loggers as lg
+from game import Game
+from memory import Memory
+from neuralnet import ResidualNN
+from player import Player
 
 logger = lg.logger_train
 logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
@@ -36,7 +36,7 @@ for i in range(cfg.TOTAL_ITERATIONS):
     # TODO make sure both players have the same weight
 
     for episode in range(cfg.EPISODES):
-        logger.info('EPISODE {:4d}')
+        logger.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
         game = Game()
         while not game.current_state.is_terminal:
             print(game.current_state.board, '\n')

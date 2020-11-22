@@ -1,7 +1,7 @@
 from collections import deque
 
-import pytablut.config as cfg
-import pytablut.loggers as lg
+import config as cfg
+import loggers as lg
 
 logger = lg.logger_memory
 logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')

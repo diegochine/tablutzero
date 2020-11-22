@@ -1,15 +1,14 @@
-import numpy as np
 import matplotlib.pyplot as plt
-
-from tensorflow.nn import softmax_cross_entropy_with_logits
+import numpy as np
 from tensorflow.keras import Input
-from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU, Reshape, add
+from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
+from tensorflow.nn import softmax_cross_entropy_with_logits
 
-import pytablut.config as cfg
-import pytablut.loggers as lg
+import config as cfg
+import loggers as lg
 
 logger = lg.logger_nnet
 
@@ -106,7 +105,6 @@ class ResidualNN(NeuralNetwork):
                  hidden_layers=cfg.HIDDEN_LAYERS):
         super().__init__(input_shape=input_shape, output_shape=output_shape,
                          reg_const=reg_const, learning_rate=learning_rate, momentum=momentum)
-        print(reg_const, learning_rate, input_shape, output_shape, '\n', hidden_layers)
         self.hidden_layers = hidden_layers
         self.model = self._build_model()
 

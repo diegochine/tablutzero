@@ -1,10 +1,10 @@
 import numpy as np
 
-import pytablut.config as cfg
-import pytablut.loggers as lg
-from pytablut.MCTS import MCTS, Node
-from pytablut.game import MAP
-from pytablut.neuralnet import ResidualNN
+import config as cfg
+import loggers as lg
+from MCTS import MCTS, Node
+from game import MAP
+from neuralnet import ResidualNN
 
 
 class Player:
@@ -29,16 +29,17 @@ class Player:
         self.game_over = False
         self.brain: ResidualNN = nnet
 
-    def build_mcts(self, state):
-        self.mcts = MCTS(self.color, Node(state), self.c_puct)
+    def build_mcts(self, state, p_root):
+        self.mcts = MCTS(self.color, Node(state), p_root, self.c_puct)
 
     def act(self, state):
         """ computes best action based on given state
         """
+        v, p = self.brain.predict(state)
         if self.mcts is None or hash(state) not in self.mcts.tree:
-            self.build_mcts(state)
+            self.build_mcts(state, p)
         else:
-            self.mcts.change_root(state)
+            self.mcts.change_root(state, p)
 
         # time to roll
         for sim in range(self.simulations):
@@ -46,7 +47,7 @@ class Player:
 
         action = self.mcts.choose_action()
 
-        return action
+        return action, None
 
     def simulate(self) -> None:
         """
