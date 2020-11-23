@@ -4,13 +4,13 @@ import pickle
 import config as cfg
 import loggers as lg
 
-logger = lg.logger_memory
-logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
-logger.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
-logger.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
+
+lg.logger_memory.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
+lg.logger_memory.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
+lg.logger_memory.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 
 
-class Memory():
+class Memory:
 
     def __init__(self, size=cfg.MEMORY_SIZE):
         self.MEMORY_SIZE = cfg.MEMORY_SIZE
@@ -28,7 +28,7 @@ class Memory():
         :param value: value of the state
         :return:
         """
-        logger.info('ADDING NEW STATE')
+        lg.logger_memory.info('ADDING NEW STATE')
         self.stmemory.append({'state': state,
                               'id': state.id,
                               'pi': pi,
@@ -45,8 +45,12 @@ class Memory():
         self.clear_stmemory()
 
     def clear_stmemory(self):
-        logger.info('CLEANING MEMORY')
+        lg.logger_memory.info('CLEANING SHORT TERM MEMORY')
         self.stmemory.clear()
 
     def save(self, version):
         pickle.dump(self.ltmemory, open('memories/mem{}.pkl'.format(version), 'wb'))
+
+    def clear_ltmemory(self):
+        lg.logger_memory.info('CLEANING LONG TERM MEMORY')
+        self.ltmemory.clear()

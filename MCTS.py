@@ -49,13 +49,16 @@ class MCTS:
 
     def new_root(self, state: State, p) -> None:
         if self.root.state.id != state.id:
+            tmp = self.root
             self.root = self.tree[state.id]
+            for edge in tmp.edges:
+                self._delete_subtree(edge)
         if self.root.is_leaf():
             self.expand_leaf(self.root, p)
 
     def add_node(self, node: Node):
         self.tree[node.id] = node
-
+    @profile
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
         node = self.root
@@ -75,15 +78,15 @@ class MCTS:
                 nu = [0] * len(node.edges)
 
             for i, edge in enumerate(node.edges):
-                lg.logger_mcts.debug('EVALUATING ACTION: {}'.format(edge.action))
+                #lg.logger_mcts.debug('EVALUATING ACTION: {}'.format(edge.action))
 
                 U = self.c_puct * \
                     ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
                     np.sqrt(N) / (1 + edge.N)
                 Q = edge.Q
-                lg.logger_mcts.debug('Q: {}, U: {}'.format(edge.Q, U))
+                #lg.logger_mcts.debug('Q: {}, U: {}'.format(Q, U))
 
-                if Q+U > max_QU:
+                if Q+U > max_QU and edge not in path:
                     lg.logger_mcts.debug('UPDATING SIMULATION EDGE')
                     max_QU = Q+U
                     simulation_edge = edge
@@ -94,6 +97,7 @@ class MCTS:
 
         return node, path
 
+    @profile
     def expand_leaf(self, leaf: Node, p):
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
         for action in leaf.state.actions:
@@ -101,10 +105,8 @@ class MCTS:
             if next_state.id not in self.tree:
                 new_leaf = Node(next_state)
                 self.add_node(new_leaf)
-            else:
-                new_leaf = self.tree[next_state.id]
-            new_edge = Edge(leaf, new_leaf, action, p[action])
-            leaf.edges.append(new_edge)
+                new_edge = Edge(leaf, new_leaf, action, p[action])
+                leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
@@ -125,3 +127,13 @@ class MCTS:
             direction *= -1
             edge.Q = edge.W / edge.N
             lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
+
+    def _delete_subtree(self, edge):
+        node = edge.out_node
+        if node != self.root:
+            for edge in node.edges:
+                self._delete_subtree(edge)
+        try:
+            del self.tree[node.id]
+        except KeyError:
+            pass

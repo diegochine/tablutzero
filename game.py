@@ -42,7 +42,7 @@ class Game:
 
 
 class State:
-
+    @profile
     def __init__(self, board, turn):
         """
         representation of the state:

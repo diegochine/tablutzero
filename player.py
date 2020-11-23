@@ -1,3 +1,4 @@
+from multiprocessing import Process
 import numpy as np
 
 import config as cfg
@@ -28,6 +29,9 @@ class Player:
         self.tau = tau
         self.turn = 1
 
+    def reset(self):
+        self.turn = 1
+
     def build_mcts(self, state, p):
         """"""
         lg.logger_player.info("BUILDING MCTS, P VALUES:")
@@ -47,15 +51,11 @@ class Player:
         self.build_mcts(state, p)
 
         lg.logger_player.info("size of the tree (start): {}".format(len(self.mcts.tree)))
-        # time to roll
-        for sim in range(self.simulations):
-            if sim % 50 == 0:
-                lg.logger_player.info('{:3d} SIMULATIONS PERFORMED'.format(sim))
-            self.simulate()
+        self.simulate()
         lg.logger_player.info("size of the tree (end)  : {}".format(len(self.mcts.tree)))
 
         action, pi = self.choose_action()
-
+        self.turn += 1
         return action, pi
 
     def choose_action(self) -> tuple:
@@ -65,7 +65,7 @@ class Player:
         :return: tuple (action, pi), pi are normalized probabilities
         """
         pi = np.array([edge.N for edge in self.mcts.root.edges])
-        if self.tau == 0:
+        if self.turn >= self.turns_before_tau0:
             act_idx = np.argmax(pi)
             action = self.mcts.root.edges[act_idx].action
         else:
@@ -74,21 +74,23 @@ class Player:
             act_idx = np.argwhere(np.random.multinomial(1, pvals) == 1).reshape(-1)
             action = self.mcts.root.edges[act_idx[0]].action
         lg.logger_player.info('COMPUTED ACTION: {}'.format(action))
-        if self.tau > 0:
-            self.tau -= 1
         return action, (pi/pi.sum())
 
+    @profile
     def simulate(self) -> None:
         """
-        Performs one monte carlo simulation, using the neural network to evaluate the leaves
+        Performs the monte carlo simulations, using the neural network to evaluate the leaves
         """
-        # selection
-        leaf, path = self.mcts.select_leaf()
-        v, p = self.brain.predict(leaf.state)
-        # expansion
-        self.mcts.expand_leaf(leaf, p)
-        # backpropagation
-        self.mcts.backpropagation(v, path)
+        for sim in range(self.simulations):
+            if sim % 50 == 0:
+                lg.logger_player.info('{:3d} SIMULATIONS PERFORMED'.format(sim))
+            # selection
+            leaf, path = self.mcts.select_leaf()
+            v, p = self.brain.predict(leaf.state)
+            # expansion
+            self.mcts.expand_leaf(leaf, p)
+            # backpropagation
+            self.mcts.backpropagation(v, path)
 
     def replay(self, memories) -> None:
         """
