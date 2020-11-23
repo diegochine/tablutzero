@@ -22,7 +22,7 @@ class Node:
 
 class Edge:
 
-    def __init__(self, in_node: Node, out_node: Node, action, p):
+    def __init__(self, in_node: Node, out_node: Node, action):
         """
         each edge represents an action from a state to another
         :param in_node: node of the initial state
@@ -35,29 +35,38 @@ class Edge:
         self.N = 0   # number of times action has been taken from initial state
         self.W = 0.  # total value of next state
         self.Q = 0.  # mean value of next state
-        self.P = p   # prior probability of selecting this action
 
 
 class MCTS:
 
-    def __init__(self, player, root: Node, p_root, c_puct: float = cfg.CPUCT):
+    def __init__(self, player, root: Node, c_puct: float = cfg.CPUCT):
         self.player = player
         self.root: Node = root
         self.tree = {root.id: root}
         self.c_puct = c_puct
-        self.new_root(self.root.state, p_root)
+        self.new_root(self.root.state)
 
-    def new_root(self, state: State, p) -> None:
+    def new_root(self, state: State) -> None:
         if self.root.state.id != state.id:
             tmp = self.root
             self.root = self.tree[state.id]
             for edge in tmp.edges:
                 self._delete_subtree(edge)
         if self.root.is_leaf():
-            self.expand_leaf(self.root, p)
+            self.expand_leaf(self.root)
 
     def add_node(self, node: Node):
         self.tree[node.id] = node
+
+    def _ucb1(self, total_visit, node_win_score, node_visit):
+        # UCB1: vi + 2 sqrt(ln(N)/ni)
+        # Vi is the average reward/value of all nodes beneath this node
+        # N is the number of times the parent node has been visited, and
+        # ni is the number of times the child node i has been visited
+        if node_visit == 0:
+            return np.inf
+        else:
+            return (node_win_score / node_visit) + 2 * np.sqrt(np.log(total_visit) / node_visit)
 
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
@@ -65,46 +74,27 @@ class MCTS:
         path = []
 
         while not node.is_leaf():
-            max_QU = -np.inf
-            N = np.sum([edge.N for edge in node.edges])
-            simulation_edge = None
-            lg.logger_mcts.debug('PLAYER TURN {}'.format(node.state.turn))
-
-            if node.id == self.root.id:
-                epsilon = cfg.EPSILON
-                nu = np.random.dirichlet([cfg.ALPHA] * len(node.edges))
-            else:
-                epsilon = 0
-                nu = [0] * len(node.edges)
-
-            for i, edge in enumerate(node.edges):
-                #lg.logger_mcts.debug('EVALUATING ACTION: {}'.format(edge.action))
-
-                U = self.c_puct * \
-                    ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
-                    np.sqrt(N) / (1 + edge.N)
-                Q = edge.Q
-                #lg.logger_mcts.debug('Q: {}, U: {}'.format(Q, U))
-
-                if Q+U > max_QU and edge not in path:
-                    lg.logger_mcts.debug('UPDATING SIMULATION EDGE')
-                    max_QU = Q+U
-                    simulation_edge = edge
-
-            # next_state = node.state.transition_function(simulation_edge.action)
-            node = simulation_edge.out_node
-            path.append(simulation_edge)
+            parent_visit = np.sum([edge.N for edge in node.edges])
+            max_uct = - np.inf
+            best = None
+            for e in node.edges:
+                uct = self._ucb1(parent_visit, e.W, e.N)
+                if uct > max_uct:
+                    max_uct = uct
+                    best = e
+            node = best.out_node
+            path.append(best)
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, p):
+    def expand_leaf(self, leaf: Node):
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
         for action in leaf.state.get_actions():
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
                 new_leaf = Node(next_state)
                 self.add_node(new_leaf)
-                new_edge = Edge(leaf, new_leaf, action, p[action])
+                new_edge = Edge(leaf, new_leaf, action)
                 leaf.edges.append(new_edge)
 
     def random_playout(self, leaf: Node):
