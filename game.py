@@ -42,7 +42,6 @@ class Game:
 
 
 class State:
-    @profile
     def __init__(self, board, turn):
         """
         representation of the state:
@@ -55,7 +54,7 @@ class State:
         self.id: int = self.__hash__()
         self.value: int = 0
         self.checkers: set = self._get_checkers()
-        self.actions: list = self._get_actions()
+        self.actions: list = []
         self.is_terminal: bool = self._terminal_test()
 
     def __hash__(self):
@@ -78,7 +77,7 @@ class State:
         king = tuple(np.argwhere(self.board == 2).flatten())
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
-        if (white_win or black_win) or not self.actions:
+        if (white_win or black_win):  # or not self.actions:
             # either the current player has lost or he cannot move (so he lost)
             self.value = -1
             return True
@@ -94,42 +93,38 @@ class State:
         else:
             return False
 
-    def _get_actions(self) -> list:
-        actions = []
-        for (x, y) in self.checkers:
-            offx = 1
-            # try up
-            while (x - offx) >= 0 and \
-                    ((x - offx, y) not in Game.citadels or self.__same_citadel_area((x, y), (x - offx, y))) and \
-                    self.board[x - offx, y] == 0:
-                actions.append(((x, y), (x - offx, y)))
-                offx += 1
+    def get_actions(self) -> list:
+        if not self.actions:
+            for (x, y) in self.checkers:
+                # try up
+                newx = x - 1
+                while newx >= 0 and self.board[newx, y] == 0 and \
+                        ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
+                    self.actions.append(((x, y), (newx, y)))
+                    newx -= 1
 
-            # try down
-            offx = 1
-            while (x + offx) <= 8 and \
-                    ((x + offx, y) not in Game.citadels or self.__same_citadel_area((x, y), (x + offx, y)))\
-                    and self.board[x + offx, y] == 0:
-                actions.append(((x, y), (x + offx, y)))
-                offx += 1
+                # try down
+                newx = x + 1
+                while newx <= 8 and self.board[newx, y] == 0 and \
+                        ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
+                    self.actions.append(((x, y), (newx, y)))
+                    newx += 1
 
-            # try left
-            offy = 1
-            while (y - offy) >= 0 and \
-                    ((x, y - offy) not in Game.citadels or self.__same_citadel_area((x, y), (x, y - offy))) and \
-                    self.board[x, y - offy] == 0:
-                actions.append(((x, y), (x, y - offy)))
-                offy += 1
+                # try left
+                newy = y - 1
+                while newy >= 0 and self.board[x, newy] == 0 and \
+                        ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
+                    self.actions.append(((x, y), (x, newy)))
+                    newy -= 1
 
-            # try right
-            offy = 1
-            while (y + offy) <= 8 and \
-                    ((x, y + offy) not in Game.citadels or self.__same_citadel_area((x, y), (x, y + offy))) and \
-                    self.board[x, y + offy] == 0:
-                actions.append(((x, y), (x, y + offy)))
-                offy += 1
+                # try right
+                newy = y + 1
+                while newy <= 8 and self.board[x, newy] == 0 and \
+                        ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
+                    self.actions.append(((x, y), (x, newy)))
+                    newy += 1
 
-        return actions
+        return self.actions
 
     def transition_function(self, action: tuple):
         """

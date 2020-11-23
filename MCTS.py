@@ -58,7 +58,7 @@ class MCTS:
 
     def add_node(self, node: Node):
         self.tree[node.id] = node
-    @profile
+
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
         node = self.root
@@ -97,10 +97,9 @@ class MCTS:
 
         return node, path
 
-    @profile
     def expand_leaf(self, leaf: Node, p):
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
-        for action in leaf.state.actions:
+        for action in leaf.state.get_actions():
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
                 new_leaf = Node(next_state)
@@ -112,7 +111,7 @@ class MCTS:
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
         state = leaf.state
         while not state.is_terminal:
-            acts = state.actions
+            acts = state.get_actions()
             # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high)
             rnd_a = acts[np.random.randint(0, len(acts))]
             state = state.transition_function(rnd_a)

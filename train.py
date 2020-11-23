@@ -59,7 +59,8 @@ for version in range(cfg.TOTAL_ITERATIONS):
         else:  # the player of this turn has lost
             memory.commit_ltmemory(-game.current_state.turn)
             lg.logger_train.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[-game.current_state.turn]))
-    memory.save(version)
+        memory.save('v{:3d}ep{:3d}'.format(version, episode))
+        memory.clear_ltmemory()
 
     lg.logger_train.info('RETRAINING NETWORK')
     if len(memory) >= cfg.MEMORY_SIZE:

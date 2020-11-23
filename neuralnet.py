@@ -200,13 +200,13 @@ class ResidualNN(NeuralNetwork):
         # FIXME sarà giusto? diego dice di fare reshape da 1x9x9x32 a 9x9x32
         logits = logits_array.reshape(self.output_shape)
 
-        predictions = self.map_actions(logits, state.actions)
+        predictions = self.map_actions(logits, state.get_actions())
 
         # SOFTMAX
         odds = np.exp(predictions)
         probs = odds / np.sum(odds)
 
-        actions_predictions = {state.actions[i]: probs[i] for i in range(len(state.actions))}
+        actions_predictions = {state.actions[i]: probs[i] for i in range(len(state.get_actions()))}
         return value, actions_predictions
 
     def map_actions(self, logits, actions):

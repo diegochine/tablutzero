@@ -74,9 +74,8 @@ class Player:
             act_idx = np.argwhere(np.random.multinomial(1, pvals) == 1).reshape(-1)
             action = self.mcts.root.edges[act_idx[0]].action
         lg.logger_player.info('COMPUTED ACTION: {}'.format(action))
-        return action, (pi/pi.sum())
+        return action, (pi / pi.sum())
 
-    @profile
     def simulate(self) -> None:
         """
         Performs the monte carlo simulations, using the neural network to evaluate the leaves
