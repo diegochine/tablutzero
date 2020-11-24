@@ -1,4 +1,3 @@
-from multiprocessing import Process
 import numpy as np
 
 import config as cfg
@@ -24,13 +23,15 @@ class Player:
         self.brain: ResidualNN = nnet
         self.simulations: int = simulations
         self.c_puct: int = c_puct
-        self.game_over: bool = False
         self.turns_before_tau0 = turns_before_tau0
         self.tau = tau
         self.turn = 1
 
     def reset(self):
         self.turn = 1
+        if self.mcts is not None:
+            self.mcts.delete_tree()
+            self.mcts = None
 
     def build_mcts(self, state, p):
         """"""
