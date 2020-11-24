@@ -77,7 +77,7 @@ class State:
         king = tuple(np.argwhere(self.board == 2).flatten())
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
-        if (white_win or black_win):  # or not self.actions:
+        if white_win or black_win or not self.get_actions():
             # either the current player has lost or he cannot move (so he lost)
             self.value = -1
             return True
