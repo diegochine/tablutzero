@@ -1,4 +1,3 @@
-from multiprocessing import Process
 import numpy as np
 
 import config as cfg
@@ -27,6 +26,9 @@ class Player:
 
     def reset(self):
         self.turn = 1
+        if self.mcts is not None:
+            self.mcts.delete_tree()
+            self.mcts = None
 
     def build_mcts(self, state):
         """"""

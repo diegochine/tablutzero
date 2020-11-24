@@ -16,6 +16,9 @@ class Node:
         self.id: int = hash(state)
         self.edges: list = []
 
+    def __eq__(self, other):
+        return self.id == other.id
+
     def is_leaf(self) -> bool:
         return len(self.edges) == 0
 
@@ -32,7 +35,7 @@ class Edge:
         self.in_node: Node = in_node
         self.out_node: Node = out_node
         self.action: tuple = action
-        self.N = 0   # number of times action has been taken from initial state
+        self.N = 0  # number of times action has been taken from initial state
         self.W = 0.  # total value of next state
         self.Q = 0.  # mean value of next state
 
@@ -52,6 +55,7 @@ class MCTS:
             self.root = self.tree[state.id]
             for edge in tmp.edges:
                 self._delete_subtree(edge)
+            del tmp
         if self.root.is_leaf():
             self.expand_leaf(self.root)
 
@@ -119,14 +123,28 @@ class MCTS:
             edge.W += v * direction
             direction *= -1
             edge.Q = edge.W / edge.N
-            lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
+            # lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
 
     def _delete_subtree(self, edge):
         node = edge.out_node
-        if node != self.root:
-            for edge in node.edges:
-                self._delete_subtree(edge)
+        if self.root is None or node != self.root:
+            del edge.out_node
+            del edge.in_node
+            del edge
+            for out_edge in node.edges:
+                self._delete_subtree(out_edge)
+            del node.edges
         try:
             del self.tree[node.id]
         except KeyError:
             pass
+        finally:
+            del node
+
+    def delete_tree(self):
+        tmp = self.root
+        self.root = None
+        for edge in tmp.edges:
+            self._delete_subtree(edge)
+        del tmp.edges
+        del tmp

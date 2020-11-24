@@ -1,20 +1,41 @@
+import os
 from collections import deque
 import pickle
 
 import config as cfg
 import loggers as lg
+import game  # needed by pickle
 
 
-lg.logger_memory.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
-lg.logger_memory.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
-lg.logger_memory.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
+def load_memories(path='./memories/'):
+    lg.logger_memory.info("LOADING MEMORIES FROM STORAGE")
+    try:
+        with open(path + 'dataset.pkl', 'rb') as f:
+            memories = pickle.load(f)
+        lg.logger_memory.info("SIZE OF LOADED MEMORIES: {:0>5d}".format(len(memories)))
+        return memories
+    except FileNotFoundError:
+        return None
+
+
+def compact_memories(path='./memories/'):
+    memories = pickle.load(open(path + 'dataset.pkl', 'rb'))
+    for fname in os.listdir(path):
+        if fname.endswith('pkl') and not fname.startswith('dataset'):
+            with open(path + fname, 'rb') as f:
+                memories.extend(pickle.load(f))
+            os.remove(path + fname)
+    pickle.dump(memories, open(path + 'dataset.pkl', 'wb'))
 
 
 class Memory:
 
-    def __init__(self, size=cfg.MEMORY_SIZE):
+    def __init__(self, size=cfg.MEMORY_SIZE, ltmemory=None):
         self.MEMORY_SIZE = cfg.MEMORY_SIZE
-        self.ltmemory = deque(maxlen=size)
+        if ltmemory is not None:
+            self.ltmemory = ltmemory
+        else:
+            self.ltmemory = deque(maxlen=size)
         self.stmemory = deque(maxlen=size)
 
     def __len__(self):
@@ -28,7 +49,7 @@ class Memory:
         :param value: value of the state
         :return:
         """
-        lg.logger_memory.info('ADDING NEW STATE')
+        lg.logger_memory.info('ADDING STATE WITH ID {}'.format(state.id))
         self.stmemory.append({'state': state,
                               'id': state.id,
                               'pi': pi,
