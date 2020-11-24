@@ -58,7 +58,7 @@ class MCTS:
     def add_node(self, node: Node):
         self.tree[node.id] = node
 
-    def _ucb1(self, total_visit, node_win_score, node_visit):
+    def ucb1(self, total_visit, node_win_score, node_visit):
         # UCB1: vi + 2 sqrt(ln(N)/ni)
         # Vi is the average reward/value of all nodes beneath this node
         # N is the number of times the parent node has been visited, and
@@ -66,7 +66,7 @@ class MCTS:
         if node_visit == 0:
             return np.inf
         else:
-            return (node_win_score / node_visit) + 2 * np.sqrt(np.log(total_visit) / node_visit)
+            return (node_win_score / node_visit) + self.c_puct * np.sqrt(np.log(total_visit) / node_visit)
 
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
@@ -78,7 +78,7 @@ class MCTS:
             max_uct = - np.inf
             best = None
             for e in node.edges:
-                uct = self._ucb1(parent_visit, e.W, e.N)
+                uct = self.ucb1(parent_visit, e.W, e.N)
                 if uct > max_uct:
                     max_uct = uct
                     best = e
@@ -100,11 +100,15 @@ class MCTS:
     def random_playout(self, leaf: Node):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
         state = leaf.state
+        visited = {state.id}
         while not state.is_terminal:
             acts = state.get_actions()
-            # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high)
+            # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high) TO BE VERIFIED
             rnd_a = acts[np.random.randint(0, len(acts))]
             state = state.transition_function(rnd_a)
+            if state in visited:
+                return 0 # it' a Draw
+            visited.add(state)
         return state.value
 
     def backpropagation(self, v: float, path: list):
