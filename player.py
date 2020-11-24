@@ -4,7 +4,6 @@ import config as cfg
 import loggers as lg
 from MCTS import MCTS, Node
 from game import MAP
-from neuralnet import ResidualNN
 
 
 class Player:

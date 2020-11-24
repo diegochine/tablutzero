@@ -70,7 +70,7 @@ class Memory:
         self.stmemory.clear()
 
     def save(self, version):
-        pickle.dump(self.ltmemory, open('memories/mem{}.pkl'.format(version), 'wb'))
+        pickle.dump(self.ltmemory, open('memories/mcts{}.pkl'.format(version), 'wb'))
 
     def clear_ltmemory(self):
         lg.logger_memory.info('CLEANING LONG TERM MEMORY')

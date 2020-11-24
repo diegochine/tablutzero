@@ -116,7 +116,7 @@ class MCTS:
         return state.value
 
     def backpropagation(self, v: float, path: list):
-        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v[0]))
+        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v))
         direction = -1
         for edge in path:
             edge.N += 1
