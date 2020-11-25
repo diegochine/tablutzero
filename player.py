@@ -82,8 +82,14 @@ class Player:
             # selection
             leaf, path = self.mcts.select_leaf()
             # expansion
-            self.mcts.expand_leaf(leaf)
-            # random playouts
-            v = self.mcts.random_playout(leaf)
+            found_terminal = self.mcts.expand_leaf(leaf)
+            if found_terminal:
+                if leaf.state.turn == self.color:
+                    v = 1
+                else:
+                    v = -1
+            else:
+                # random playouts
+                v = self.mcts.random_playout(leaf)
             # backpropagation
             self.mcts.backpropagation(v, path)

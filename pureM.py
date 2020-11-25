@@ -20,16 +20,16 @@ def self_play(p1: Player, p2: Player, memory: Memory):
         else:
             turn = 'BLACK'
             act, pi = p2.act(game.current_state)
-        lg.logger_train.info('{} TURN, ACTION: {}'.format(turn, act))
+        lg.logger_pure.info('{} TURN, ACTION: {}'.format(turn, act))
         memory.commit_stmemory(game.current_state, pi, None)
         game.execute(act)
 
     if game.current_state.value == 0:  # it's a draw
-        lg.logger_train.info("IT'S A DRAW")
+        lg.logger_pure.info("IT'S A DRAW")
         memory.commit_ltmemory(0)
     else:  # the player of this turn has lost
         memory.commit_ltmemory(-game.current_state.turn)
-        lg.logger_train.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[-game.current_state.turn]))
+        lg.logger_pure.info('WINNER OF THIS EPISODE: {}'.format(endgame_map[-game.current_state.turn]))
 
 
 if __name__ == "__main__":

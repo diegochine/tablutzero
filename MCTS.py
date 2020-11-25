@@ -91,8 +91,9 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node):
+    def expand_leaf(self, leaf: Node) -> bool:
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
+        found_terminal = False
         for action in leaf.state.get_actions():
             next_state = leaf.state.transition_function(action)
             if next_state.id not in self.tree:
@@ -100,6 +101,9 @@ class MCTS:
                 self.add_node(new_leaf)
                 new_edge = Edge(leaf, new_leaf, action)
                 leaf.edges.append(new_edge)
+            if next_state.is_terminal:
+                found_terminal = True
+        return found_terminal
 
     def random_playout(self, leaf: Node):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
