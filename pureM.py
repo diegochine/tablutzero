@@ -21,6 +21,7 @@ def self_play(p1: Player, p2: Player, memory: Memory):
             turn = 'BLACK'
             act, pi = p2.act(game.current_state)
         lg.logger_pure.info('{} TURN, ACTION: {}'.format(turn, act))
+        print('{} TURN, ACTION: {}'.format(turn, act))
         memory.commit_stmemory(game.current_state, pi, None)
         game.execute(act)
 

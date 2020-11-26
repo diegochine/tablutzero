@@ -32,10 +32,18 @@ class Player:
     def build_mcts(self, state):
         """"""
         lg.logger_player.info("BUILDING MCTS")
-        if self.mcts is None or hash(state) not in self.mcts.tree:
+        # if self.mcts is None or hash(state) not in self.mcts.tree:
+        #    self.mcts = MCTS(self.color, Node(state), self.c_puct)
+        # else:
+        #    self.mcts.new_root(state)
+        if self.mcts is None:
             self.mcts = MCTS(self.color, Node(state), self.c_puct)
         else:
-            self.mcts.new_root(state)
+            edges = self.mcts.root.edges
+            for e in edges:
+                if e.out_node.state.id == state.id:
+                    self.mcts.new_root(e.out_node)
+                    break
 
     def act(self, state):
         """
@@ -45,9 +53,9 @@ class Player:
         lg.logger_player.info("COMPUTING ACTION FOR STATE {}".format(state.id))
         self.build_mcts(state)
 
-        lg.logger_player.info("size of the tree (start): {}".format(len(self.mcts.tree)))
+        # lg.logger_player.info("size of the tree (start): {}".format(len(self.mcts.tree)))
         self.simulate()
-        lg.logger_player.info("size of the tree (end)  : {}".format(len(self.mcts.tree)))
+        # lg.logger_player.info("size of the tree (end)  : {}".format(len(self.mcts.tree)))
 
         action, pi = self.choose_action()
         self.turn += 1
@@ -67,6 +75,8 @@ class Player:
 
         act_idx = np.argmax(choices_weights)
         action = self.mcts.root.edges[act_idx].action
+
+        self.mcts.new_root(self.mcts.root.edges[act_idx].out_node)
 
         lg.logger_player.info('COMPUTED ACTION: {}'.format(action))
         return action, (pi / pi.sum())

@@ -14,7 +14,7 @@ class Node:
         """
         self.state: State = state
         self.id: int = hash(state)
-        self.in_edges = 0
+        #self.in_edges = 0
         self.edges: list = []
 
     def __eq__(self, other):
@@ -46,27 +46,27 @@ class MCTS:
     def __init__(self, player, root: Node, c_puct: float = cfg.CPUCT):
         self.player = player
         self.root: Node = root
-        self.tree = {root.id: root}
+        # self.tree = {root.id: root}
         self.c_puct = c_puct
-        self.new_root(self.root.state)
+        self.new_root(self.root)
 
-    def new_root(self, state: State) -> None:
-        if self.root.state.id != state.id:
+    def new_root(self, node: Node) -> None:
+        if self.root.state.id != node.state.id:
             tmp = self.root
-            self.root = self.tree[state.id]
+            self.root = node
             for edge in tmp.edges:
                 self._delete_subtree(edge)
-            tmp.in_edges -= 1
-            if tmp.in_edges == 0:
-                del self.tree[tmp.id]
-                del tmp
-            else:
-                tmp.edges = []
+            # tmp.in_edges -= 1
+            # if tmp.in_edges == 0:
+            # del self.tree[tmp.id]
+            del tmp
+            # else:
+            #   tmp.edges = []
         if self.root.is_leaf():
             self.expand_leaf(self.root)
 
-    def add_node(self, node: Node):
-        self.tree[node.id] = node
+    # def add_node(self, node: Node):
+    #    self.tree[node.id] = node
 
     def ucb1(self, total_visit, node_win_score, node_visit):
         # UCB1: vi + 2 sqrt(ln(N)/ni)
@@ -102,12 +102,13 @@ class MCTS:
         found_terminal = False
         for action in leaf.state.get_actions():
             next_state = leaf.state.transition_function(action)
-            if next_state.id not in self.tree:
-                new_leaf = Node(next_state)
-                self.add_node(new_leaf)
-            else:
-                new_leaf = self.tree[next_state.id]
-            new_leaf.in_edges += 1
+            new_leaf = Node(next_state)
+            #if next_state.id not in self.tree:
+            #    new_leaf = Node(next_state)
+            #    self.add_node(new_leaf)
+            #else:
+                #new_leaf = self.tree[next_state.id]
+            #new_leaf.in_edges += 1
             new_edge = Edge(leaf, new_leaf, action)
             leaf.edges.append(new_edge)
             if next_state.is_terminal:
@@ -144,13 +145,13 @@ class MCTS:
             del edge.out_node
             del edge.in_node
             del edge
-            node.in_edges -= 1
-            if node.in_edges == 0:
-                for out_edge in node.edges:
-                    self._delete_subtree(out_edge)
-                del node.edges
-                del self.tree[node.id]
-                del node
+            # node.in_edges -= 1
+            # if node.in_edges == 0:
+            for out_edge in node.edges:
+                self._delete_subtree(out_edge)
+            del node.edges
+            # del self.tree[node.id]
+            del node
 
     def delete_tree(self):
         tmp = self.root
