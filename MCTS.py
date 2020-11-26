@@ -14,6 +14,7 @@ class Node:
         """
         self.state: State = state
         self.id: int = hash(state)
+        self.in_edges = 0
         self.edges: list = []
 
     def __eq__(self, other):
@@ -56,7 +57,12 @@ class MCTS:
             self.root = self.tree[state.id]
             for edge in tmp.edges:
                 self._delete_subtree(edge)
-            del tmp
+            tmp.in_edges -= 1
+            if tmp.in_edges == 0:
+                del self.tree[tmp.id]
+                del tmp
+            else:
+                tmp.edges = []
         if self.root.is_leaf():
             self.expand_leaf(self.root, p)
 
@@ -109,8 +115,11 @@ class MCTS:
             if next_state.id not in self.tree:
                 new_leaf = Node(next_state)
                 self.add_node(new_leaf)
-                new_edge = Edge(leaf, new_leaf, action, p[action])
-                leaf.edges.append(new_edge)
+            else:
+                new_leaf = self.tree[next_state.id]
+            new_leaf.in_edges += 1
+            new_edge = Edge(leaf, new_leaf, action, p[action])
+            leaf.edges.append(new_edge)
             if next_state.is_terminal:
                 found_terminal = True
         return found_terminal
@@ -126,7 +135,7 @@ class MCTS:
         return state.value
 
     def backpropagation(self, v, path: list):
-        lg.logger_mcts.info('PERFORMING BACKPROPAGATION WITH v = {:.2f}'.format(v[0]))
+        lg.logger_mcts.info('PERFORMING BACKPROPAGATION')
         direction = -1
         for edge in path:
             edge.N += 1
@@ -141,15 +150,13 @@ class MCTS:
             del edge.out_node
             del edge.in_node
             del edge
-            for out_edge in node.edges:
-                self._delete_subtree(out_edge)
-            del node.edges
-        try:
-            del self.tree[node.id]
-        except KeyError:
-            pass
-        finally:
-            del node
+            node.in_edges -= 1
+            if node.in_edges == 0:
+                for out_edge in node.edges:
+                    self._delete_subtree(out_edge)
+                del node.edges
+                del self.tree[node.id]
+                del node
 
     def delete_tree(self):
         tmp = self.root
