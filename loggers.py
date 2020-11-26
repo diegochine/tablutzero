@@ -15,6 +15,7 @@ def setup_logger(name, file, level=logging.INFO):
 
 
 logger_mcts = setup_logger('MCTS', 'logs/MCTS.log')
+logger_mcts.disabled = True
 logger_train = setup_logger('train', 'logs/main.log')
 logger_nnet = setup_logger('neuralnet', 'logs/nnet.log')
 logger_memory = setup_logger('memory', 'logs/memory.log')

@@ -35,8 +35,7 @@ class Player:
 
     def build_mcts(self, state, p):
         """"""
-        lg.logger_player.info("BUILDING MCTS, P VALUES:")
-        lg.logger_player.info(p)
+        lg.logger_player.info("BUILDING MCTS")
         if self.mcts is None or hash(state) not in self.mcts.tree:
             self.mcts = MCTS(self.color, Node(state), p, self.c_puct)
         else:
@@ -88,14 +87,19 @@ class Player:
             leaf, path = self.mcts.select_leaf()
             v, p = self.brain.predict(leaf.state)
             # expansion
-            self.mcts.expand_leaf(leaf, p)
+            found_terminal = self.mcts.expand_leaf(leaf, p)
+            if found_terminal:
+                if leaf.state.turn == self.color:
+                    v = 1
+                else:
+                    v = -1
             # backpropagation
             self.mcts.backpropagation(v, path)
 
     def replay(self, memories) -> None:
         """
         Retrain the network using the given memories
-        :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'pi
+        :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'pi', 'turn'
         """
         lg.logger_player.info('RETRAINING MODEL')
 
@@ -110,4 +114,4 @@ class Player:
 
             loss = self.brain.fit(X, y, epochs=cfg.EPOCHS, verbose=cfg.VERBOSE,
                                   validation_split=0, batch_size=minibatch.size)
-            lg.logger_player.info('ITERATION {:3d}/{:3d}, LOSS {}'.format(i, cfg.TRAINING_LOOPS, loss.history))
+            lg.logger_nnet.info('ITERATION {:3d}/{:3d}, LOSS {}'.format(i, cfg.TRAINING_LOOPS, loss.history))

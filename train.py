@@ -67,11 +67,12 @@ if __name__ == "__main__":
         for episode in range(cfg.EPISODES):
             lg.logger_train.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
             self_play(white, black, memory)
+            memory.save('ep{:0>3d}'.format(episode))
 
         memory.save('v{:0>3d}'.format(version))
         lg.logger_train.info('RETRAINING NETWORK')
-        if len(memory) >= cfg.MIN_MEMORIES:
-            white.replay(memory.ltmemory)
-            #white.brain.save('general', version)
+        print('TRAINIGN')
+        white.replay(memory.ltmemory)
+        #white.brain.save('general', version)
 
         # TODO evaluate network
