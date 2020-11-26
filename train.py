@@ -42,7 +42,7 @@ if __name__ == "__main__":
     endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
 
     # LOAD MEMORY STORAGE
-    ltmemory = None  # load_memories()
+    ltmemory = load_memories()
     memory = Memory(cfg.MEMORY_SIZE, ltmemory)
 
     # CREATE (AND EVENTUALLY LOAD) NETWORKS
@@ -67,12 +67,12 @@ if __name__ == "__main__":
         for episode in range(cfg.EPISODES):
             lg.logger_train.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
             self_play(white, black, memory)
-            memory.save('ep{:0>3d}'.format(episode))
-            memory.clear_ltmemory()
 
+        memory.save('v{:0>3d}'.format(version))
         compact_memories()
         ltmemory = load_memories()
         memory = Memory(cfg.MEMORY_SIZE, ltmemory)
+
         lg.logger_train.info('RETRAINING NETWORK')
         white.replay(memory.ltmemory)
         white.brain.save('general', version)

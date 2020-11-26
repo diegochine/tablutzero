@@ -185,5 +185,8 @@ class State:
         black = np.where(self.board == -1, 1, 0)
         white = np.where(self.board == 1, 1, 0)
         king = np.where(self.board == 2, 1, 0)
-        turn = np.full((9, 9), self.turn, dtype=int)
+        if self.turn == -1:
+            turn = np.zeros((9, 9), dtype=int)
+        else:
+            turn = np.ones((9, 9), dtype=int)
         return np.stack([black, white, king, turn], axis=2)

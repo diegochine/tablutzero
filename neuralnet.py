@@ -16,7 +16,7 @@ logger = lg.logger_nnet
 
 def loss_with_action_masking(y_true, y_pred):
     logits = y_true
-    labels = tf.where(y_true == 0., -100., y_pred)
+    labels = tf.where(y_true == 0., 1e-6, y_pred)
     return softmax_cross_entropy_with_logits(labels=labels, logits=logits)
 
 
@@ -241,7 +241,7 @@ class ResidualNN(NeuralNetwork):
         return pred
 
     def map_into_action_space(self, actions, pi):
-        actions_space = np.full(self.output_shape, -100, dtype=float)
+        actions_space = np.zeros(self.output_shape, dtype=float)
         for i, (a_from, a_to) in enumerate(actions):
             distance_x, distance_y = np.subtract(a_to, a_from)
             if distance_x != 0:
