@@ -33,13 +33,13 @@ class Player:
             self.mcts.delete_tree()
             self.mcts = None
 
-    def build_mcts(self, state, p):
+    def build_mcts(self, state):
         """"""
         lg.logger_player.info("BUILDING MCTS")
-        if self.mcts is None or hash(state) not in self.mcts.tree:
-            self.mcts = MCTS(self.color, Node(state), p, self.c_puct)
+        if self.mcts is None:
+            self.mcts = MCTS(self.color, Node(state), self.c_puct)
         else:
-            self.mcts.new_root(state, p)
+            self.mcts.new_root(Node(state))
 
     def act(self, state):
         """
@@ -47,16 +47,12 @@ class Player:
         :return tuple (action, pi)
         """
         lg.logger_player.info("COMPUTING ACTION FOR STATE {}".format(state.id))
-        v, p = self.brain.predict(state)
-        self.build_mcts(state, p)
-
-        lg.logger_player.info("size of the tree (start): {}".format(len(self.mcts.tree)))
+        # v = self.brain.predict(state)
+        self.build_mcts(state)
         self.simulate()
-        lg.logger_player.info("size of the tree (end)  : {}".format(len(self.mcts.tree)))
-
-        action, pi = self.choose_action()
+        action = self.choose_action()
         self.turn += 1
-        return action, pi
+        return action
 
     def choose_action(self) -> tuple:
         """
@@ -64,17 +60,18 @@ class Player:
         either deterministically or stochastically
         :return: tuple (action, pi), pi are normalized probabilities
         """
-        pi = np.array([edge.N for edge in self.mcts.root.edges])
-        if self.turn >= self.turns_before_tau0:
+        pi = np.array([edge.Q for edge in self.mcts.root.edges])
+        if self.turn >= self.turns_before_tau0 or True:
             act_idx = np.argmax(pi)
             action = self.mcts.root.edges[act_idx].action
-        else:
+        else:  # FIXME testare nuove cose
             pvals = np.power(pi, 1 / self.tau)
             pvals = pvals / np.sum(pvals)  # normalization, not sure it's actually needed
-            act_idx = np.argwhere(np.random.multinomial(1, pvals) == 1).reshape(-1)
-            action = self.mcts.root.edges[act_idx[0]].action
+            act_idx = np.argwhere(np.random.multinomial(1, pvals) == 1).reshape(-1)[0]
+            action = self.mcts.root.edges[act_idx].action
         lg.logger_player.info('COMPUTED ACTION: {}'.format(action))
-        return action, (pi / pi.sum())
+        self.mcts.new_root(self.mcts.root.edges[act_idx].out_node)
+        return action
 
     def simulate(self) -> None:
         """
@@ -85,9 +82,9 @@ class Player:
                 lg.logger_player.info('{:3d} SIMULATIONS PERFORMED'.format(sim))
             # selection
             leaf, path = self.mcts.select_leaf()
-            v, p = self.brain.predict(leaf.state)
+            v = self.brain.predict(leaf.state)
             # expansion
-            found_terminal = self.mcts.expand_leaf(leaf, p)
+            found_terminal = self.mcts.expand_leaf(leaf)
             if found_terminal:
                 if leaf.state.turn == self.color:
                     v = 1
@@ -99,18 +96,14 @@ class Player:
     def replay(self, memories) -> None:
         """
         Retrain the network using the given memories
-        :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'pi', 'turn'
+        :param memories: iterable of memories, i.e. objects with attributes 'state', ' value', 'turn'
         """
         lg.logger_player.info('RETRAINING MODEL')
 
         for i in range(cfg.TRAINING_LOOPS):
             minibatch = np.random.choice(memories, min(cfg.BATCH_SIZE, len(memories)))
-            pi = [self.brain.map_into_action_space(actions, pi)
-                  for actions, pi in zip([memory['state'].actions for memory in minibatch],
-                                         [memory['pi'] for memory in minibatch])]
             X = np.array([memory['state'].convert_into_cnn() for memory in minibatch])
-            y = {'value_head': np.array([memory['value'] for memory in minibatch]),
-                 'policy_head': np.array(pi)}
+            y = np.array([memory['value'] for memory in minibatch])
 
             loss = self.brain.fit(X, y, epochs=cfg.EPOCHS, verbose=cfg.VERBOSE,
                                   validation_split=0, batch_size=minibatch.size)

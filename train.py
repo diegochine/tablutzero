@@ -17,16 +17,16 @@ def self_play(p1: Player, p2: Player, memory: Memory):
     p2.reset()
 
     while not game.current_state.is_terminal:
-        print('CURRENT TURN:', endgame_map[game.current_player])
-        print(game.current_state.board, '\n')
+        print(game.current_state.board)
         if game.current_player == 1:
             turn = 'WHITE'
-            act, pi = p1.act(game.current_state)
+            act = p1.act(game.current_state)
         else:
             turn = 'BLACK'
-            act, pi = p2.act(game.current_state)
+            act = p2.act(game.current_state)
         lg.logger_train.info('{} TURN, ACTION: {}'.format(turn, act))
-        memory.commit_stmemory(game.current_state, pi, None)
+        print('{} TURN, ACTION: {}\n'.format(turn, act))
+        memory.commit_stmemory(game.current_state)
         game.execute(act)
 
     if game.current_state.value == 0:  # it's a draw

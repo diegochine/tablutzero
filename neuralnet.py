@@ -173,12 +173,10 @@ class ResidualNN(NeuralNetwork):
             x = self._residual_layer(x, hidden_layer['filters'], hidden_layer['kernel_size'])
 
         value_head = self._value_head(x)
-        policy_head = self._policy_head(x)
 
-        model = Model(inputs=[input_block], outputs=[value_head, policy_head])
-        model.compile(loss={'value_head': 'mean_squared_error', 'policy_head': loss_with_action_masking},
-                      optimizer=SGD(lr=self.learning_rate, momentum=self.momentum),
-                      loss_weights={'value_head': 0.5, 'policy_head': 0.5})
+        model = Model(inputs=[input_block], outputs=[value_head])
+        model.compile(loss={'value_head': 'mean_squared_error'},
+                      optimizer=SGD(lr=self.learning_rate, momentum=self.momentum))
 
         return model
 
@@ -189,25 +187,13 @@ class ResidualNN(NeuralNetwork):
 
     def predict(self, state):
         """
-            :return: the value of the action and a dictionary for actions (from, to) --> prediction
+            :return: the value of the state
         """
         input_to_model = np.array([self.state_to_model_input(state)])
 
         preds = self.model.predict(input_to_model)
-        value_array = preds[0]
-        logits_array = preds[1]
-        value = value_array[0]
-        # FIXME sarà giusto? diego dice di fare reshape da 1x9x9x32 a 9x9x32
-        logits = logits_array.reshape(self.output_shape)
-
-        predictions = self.map_actions(logits, state.get_actions())
-
-        # SOFTMAX
-        odds = np.exp(predictions)
-        probs = odds / np.sum(odds)
-
-        actions_predictions = {state.actions[i]: probs[i] for i in range(len(state.get_actions()))}
-        return value, actions_predictions
+        value = preds[0, 0]
+        return value
 
     def map_actions(self, logits, actions):
         """

@@ -41,28 +41,27 @@ class Memory:
     def __len__(self):
         return len(self.ltmemory)
 
-    def commit_stmemory(self, state, pi, value):
+    def commit_stmemory(self, state):
         """
 
         :param state: State object
-        :param pi: search probabilities
-        :param value: value of the state
         :return:
         """
         lg.logger_memory.info('ADDING STATE WITH ID {}'.format(state.id))
         self.stmemory.append({'state': state,
                               'id': state.id,
-                              'pi': pi,
-                              'value': value,
-                              'playerTurn': state.turn})
+                              'value': None,
+                              'turn': state.turn})
 
     def commit_ltmemory(self, winner):
-        for i in self.stmemory:
-            if i['playerTurn'] == winner:
-                i['value'] = winner
+        for mem in self.stmemory:
+            if winner == 0:
+                mem['value'] = 0
+            elif mem['turn'] == winner:
+                mem['value'] = 1
             else:
-                i['value'] = -winner
-            self.ltmemory.append(i)
+                mem['value'] = -1
+            self.ltmemory.append(mem)
         self.clear_stmemory()
 
     def clear_stmemory(self):

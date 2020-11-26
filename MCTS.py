@@ -14,11 +14,13 @@ class Node:
         """
         self.state: State = state
         self.id: int = hash(state)
-        self.in_edges = 0
         self.edges: list = []
 
     def __eq__(self, other):
         return self.id == other.id
+
+    def __ne__(self, other):
+        return self.id != other.id
 
     def is_leaf(self) -> bool:
         return len(self.edges) == 0
@@ -26,7 +28,7 @@ class Node:
 
 class Edge:
 
-    def __init__(self, in_node: Node, out_node: Node, action, p):
+    def __init__(self, in_node: Node, out_node: Node, action):
         """
         each edge represents an action from a state to another
         :param in_node: node of the initial state
@@ -39,35 +41,41 @@ class Edge:
         self.N = 0  # number of times action has been taken from initial state
         self.W = 0.  # total value of next state
         self.Q = 0.  # mean value of next state
-        self.P = p  # prior probability of selecting this action
 
 
 class MCTS:
 
-    def __init__(self, player, root: Node, p_root, c_puct: float = cfg.CPUCT):
+    def __init__(self, player, root: Node, c_puct: float = cfg.CPUCT):
         self.player = player
         self.root: Node = root
-        self.tree = {root.id: root}
         self.c_puct = c_puct
-        self.new_root(self.root.state, p_root)
+        self.new_root(self.root)
 
-    def new_root(self, state: State, p) -> None:
-        if self.root.state.id != state.id:
+    def _delete_subtree(self, edge):
+        node = edge.out_node
+        del edge.out_node
+        del edge.in_node
+        del edge
+        for out_edge in node.edges:
+            self._delete_subtree(out_edge)
+        del node.edges
+        del node
+
+    def delete_tree(self):
+        for edge in self.root.edges:
+            self._delete_subtree(edge)
+        del self.root.edges
+        self.root = None
+
+    def new_root(self, node: Node) -> None:
+        if self.root != node:
             tmp = self.root
-            self.root = self.tree[state.id]
-            for edge in tmp.edges:
+            self.root = node
+            for edge in [edge for edge in tmp.edges if edge.out_node != self.root]:
                 self._delete_subtree(edge)
-            tmp.in_edges -= 1
-            if tmp.in_edges == 0:
-                del self.tree[tmp.id]
-                del tmp
-            else:
-                tmp.edges = []
+            del tmp.edges
         if self.root.is_leaf():
-            self.expand_leaf(self.root, p)
-
-    def add_node(self, node: Node):
-        self.tree[node.id] = node
+            self.expand_leaf(self.root)
 
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
@@ -76,7 +84,7 @@ class MCTS:
 
         while not node.is_leaf():
             max_QU = -np.inf
-            N = np.sum([edge.N for edge in node.edges])
+            Np = np.sum([edge.N for edge in node.edges])
             simulation_edge = None
             lg.logger_mcts.debug('PLAYER TURN {}'.format(node.state.turn))
 
@@ -88,17 +96,18 @@ class MCTS:
                 nu = [0] * len(node.edges)
 
             for i, edge in enumerate(node.edges):
-                # lg.logger_mcts.debug('EVALUATING ACTION: {}'.format(edge.action))
+                if edge.N == 0:
+                    U = np.inf
+                else:
+                    U = self.c_puct * np.sqrt(np.log(Np) / edge.N)
 
-                U = self.c_puct * \
-                    ((1 - epsilon) * edge.P + epsilon * nu[i]) * \
-                    np.sqrt(N) / (1 + edge.N)
-                Q = edge.Q
-                # lg.logger_mcts.debug('Q: {}, U: {}'.format(Q, U))
+                # U = self.c_puct * ((1 - epsilon) * edge.P + epsilon * nu[i]) * np.sqrt(N) / (1 + edge.N)
+                QU = edge.Q + U
+                lg.logger_mcts.info('ACTION: {}, QU: {}'.format(edge.action, QU))
 
-                if Q + U > max_QU and edge not in path:
+                if QU > max_QU and edge not in path:
                     lg.logger_mcts.debug('UPDATING SIMULATION EDGE')
-                    max_QU = Q + U
+                    max_QU = QU
                     simulation_edge = edge
 
             # next_state = node.state.transition_function(simulation_edge.action)
@@ -107,18 +116,13 @@ class MCTS:
 
         return node, path
 
-    def expand_leaf(self, leaf: Node, p) -> bool:
+    def expand_leaf(self, leaf: Node) -> bool:
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
         found_terminal = False
         for action in leaf.state.get_actions():
             next_state = leaf.state.transition_function(action)
-            if next_state.id not in self.tree:
-                new_leaf = Node(next_state)
-                self.add_node(new_leaf)
-            else:
-                new_leaf = self.tree[next_state.id]
-            new_leaf.in_edges += 1
-            new_edge = Edge(leaf, new_leaf, action, p[action])
+            new_leaf = Node(next_state)
+            new_edge = Edge(leaf, new_leaf, action)
             leaf.edges.append(new_edge)
             if next_state.is_terminal:
                 found_terminal = True
@@ -136,32 +140,10 @@ class MCTS:
 
     def backpropagation(self, v, path: list):
         lg.logger_mcts.info('PERFORMING BACKPROPAGATION')
-        direction = -1
+        direction = 1
         for edge in path:
             edge.N += 1
             edge.W += v * direction
             direction *= -1
             edge.Q = edge.W / edge.N
-            # lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
-
-    def _delete_subtree(self, edge):
-        node = edge.out_node
-        if self.root is None or node != self.root:
-            del edge.out_node
-            del edge.in_node
-            del edge
-            node.in_edges -= 1
-            if node.in_edges == 0:
-                for out_edge in node.edges:
-                    self._delete_subtree(out_edge)
-                del node.edges
-                del self.tree[node.id]
-                del node
-
-    def delete_tree(self):
-        tmp = self.root
-        self.root = None
-        for edge in tmp.edges:
-            self._delete_subtree(edge)
-        del tmp.edges
-        del tmp
+            lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
