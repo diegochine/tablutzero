@@ -91,7 +91,7 @@ class Player:
         if self.choice_strategy == "max_child":
             # select the action with the highest reward
             pi = np.array([edge.Q for edge in self.mcts.root.edges])
-            pi += np.abs(min(pi)) + 1e-5
+            pi += np.abs(np.min(pi)) + 1e-5
         elif self.choice_strategy == "robust_child":
             # select the most visited action
             pi = np.array([edge.N for edge in self.mcts.root.edges])
@@ -120,7 +120,9 @@ class Player:
         """
         Performs the monte carlo simulations, using the neural network to evaluate the leaves
         """
-        for sim in range(self.simulations):
+        self.__start_timer()
+        sim = 1
+        while not self.__timeover():
             if sim % 50 == 0:
                 lg.logger_player.info('{:3d} SIMULATIONS PERFORMED'.format(sim))
             # selection
@@ -142,6 +144,7 @@ class Player:
             # v = v_term + (alpha * v_brain + (1 - alpha) * v_play)
             # backpropagation
             self.mcts.backpropagation(v, path)
+            sim += 1
 
     @Timeit(logger=lg.logger_player)
     def replay(self, memories) -> None:

@@ -133,7 +133,6 @@ class MCTS:
         return node, path
 
     @profile
-    @Timeit(logger=lg.logger_mcts)
     def expand_leaf(self, leaf: Node) -> bool:
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
         found_terminal = leaf.state.is_terminal
@@ -147,7 +146,6 @@ class MCTS:
         return found_terminal
 
     @profile
-    @Timeit(logger=lg.logger_mcts)
     def random_playout(self, leaf: Node, check_terminals):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
         current_state = leaf.state
