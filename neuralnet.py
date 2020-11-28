@@ -41,11 +41,11 @@ class NeuralNetwork:
 
     def save(self, color, version):
         lg.logger_nnet.info('SAVING MODEL {}{:2d}'.format(color, version))
-        self.model.save('models/{}_version{}.h5'.format(color, version))
+        self.model.save('model/{}_version{}.h5'.format(color, version))
 
     def load_model(self, color, version):
         lg.logger_nnet.info('LOADING MODEL {}{:2d}'.format(color, version))
-        return load_model('models/{}version{}.h5'.format(color, version))
+        return load_model('model/{}version{}.h5'.format(color, version))
 
     def printWeightAverages(self):
         layers = self.model.layers

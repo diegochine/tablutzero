@@ -13,12 +13,15 @@ from utils import Timeit
 
 class Player:
 
-    def __init__(self, color, name, nnet, turns_before_tau0=cfg.TURNS_BEFORE_TAU0, tau=cfg.TAU,
-                 timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS, c_puct=cfg.CPUCT):
+    def __init__(self, color, name, nnet, timeout=cfg.TIMEOUT,
+                 turns_before_tau0=cfg.TURNS_BEFORE_TAU0, tau=cfg.TAU, tau_alpha=cfg.TAU_ALPHA,
+                 simulations=cfg.MCTS_SIMULATIONS, c_puct=cfg.CPUCT, choice_strategy="max_child"):
         """
+        Parameters:
         :param color: color of the player, either BLACK or WHITE
         :param name: name of the player
         :param timeout: timeout in seconds for each move computation
+        :param choice_strategy: "max_child", "robust_child", "max_robut_child" or "secure_child"
         """
         self.name = name
         self.color: int = MAP[color]
@@ -26,9 +29,11 @@ class Player:
         self.mcts: MCTS = None
         self.brain: ResidualNN = nnet
         self.simulations: int = simulations
+        self.choice_strategy = choice_strategy
         self.c_puct: int = c_puct
         self.turns_before_tau0 = turns_before_tau0
         self.tau = tau
+        self.tau_alpha = tau_alpha
         self.turn = 1
         self.__start_time = None
 
@@ -48,8 +53,11 @@ class Player:
         """"""
         lg.logger_player.info("BUILDING MCTS")
         if self.mcts is None:
-            if self.turn == 1:  # hard coded for first try
+            if self.turn == 1:
                 self.mcts = self.load_history(state)
+                if self.color == -1:
+                    self.mcts.new_root(Node(state))
+                    self.mcts.swap_values()
             if self.mcts is None:  # may still be None if state does not exist in history
                 self.mcts = MCTS(self.color, Node(state), self.c_puct)
             win_action = None
@@ -71,7 +79,6 @@ class Player:
         else:
             self.simulate()
             action = self.choose_action()
-            self.end_turn()
             return action
 
     @Timeit(logger=lg.logger_player)
@@ -81,18 +88,31 @@ class Player:
         either deterministically or stochastically
         :return: tuple (action, pi), pi are normalized probabilities
         """
-        pi = np.array([edge.Q for edge in self.mcts.root.edges])
+        if self.choice_strategy == "max_child":
+            # select the action with the highest reward
+            pi = np.array([edge.Q for edge in self.mcts.root.edges])
+            pi += np.abs(min(pi)) + 1e-5
+        elif self.choice_strategy == "robust_child":
+            # select the most visited action
+            pi = np.array([edge.N for edge in self.mcts.root.edges])
+        elif self.choice_strategy == "max-robust_child":
+            # select the action with both the highest visit count and the highest reward;
+            # if none exists, then continue searching until an acceptable visit count is achieved
+            raise NotImplementedError(f'{self.choice_strategy} strategy not yet implemented')
+        elif self.choice_strategy == "secure child":
+            # the action which maximizes the lower confidence bound (q + a/sqrt(n))
+            raise NotImplementedError(f'{self.choice_strategy} strategy not yet implemented')
+        else:
+            raise ValueError(f'wrong choice strategy: {self.choice_strategy}')
         if self.turn >= self.turns_before_tau0:
             act_idx = np.argmax(pi)
             action = self.mcts.root.edges[act_idx].action
         else:  # FIXME testare nuove cose
-            pvals = np.power(pi, 1 / self.tau)
-            pvals = pvals / np.sum(pvals)  # normalization
+            pvals = pi / np.sum(pi)  # normalization
             act_idx = np.argwhere(np.random.multinomial(1, pvals) == 1).reshape(-1)[0]
             action = self.mcts.root.edges[act_idx].action
         lg.logger_player.info('COMPUTED ACTION: {}'.format(action))
-        self.mcts.new_root(self.mcts.root.edges[act_idx].out_node)
-        self._update_tau()
+        self.end_turn(self.mcts.root.edges[act_idx].out_node)
         return action
 
     @Timeit(logger=lg.logger_player)
@@ -115,8 +135,9 @@ class Player:
                 else:
                     v = -1
             else:
-                v, play_path = self.mcts.random_playout(leaf, self.turn > 10)
-                v *= max(1, cfg.MAX_MOVES - self.turn - len(play_path))
+                v, play_path = self.mcts.random_playout(leaf, self.turn > 5)
+                if self.turn > 1:
+                    v *= max(1, cfg.MAX_MOVES - len(play_path))
             # alpha = self.turn / (self.turn + play_len)
             # v = v_term + (alpha * v_brain + (1 - alpha) * v_play)
             # backpropagation
@@ -140,14 +161,11 @@ class Player:
             lg.logger_nnet.info('ITERATION {:3d}/{:3d}, LOSS {}'.format(i, cfg.TRAINING_LOOPS, loss.history))
 
     def _update_tau(self):
-        self.tau = self.tau * cfg.TAU_ALPHA
+        self.tau = self.tau * self.tau_alpha
 
     def load_history(self, state):
         try:
-            if self.color == 1:
-                history = pickle.load(open('model/history/root.pkl', 'rb'))
-            else:
-                history = pickle.load(open(f'model/history/{state.id}.pkl', 'rb'))
+            history = pickle.load(open('model/history/root.pkl', 'rb'))
             lg.logger_player.info('LOADING HISTORY FROM MEMORY')
             return history
         except FileNotFoundError:
@@ -156,15 +174,23 @@ class Player:
 
     def save_history(self):
         if self.turn == 1:
+            self.mcts.cut_tree(2)
             if self.color == 1:
                 pickle.dump(self.mcts, open('model/history/root.pkl', 'wb'))
             else:
                 state = self.mcts.root.state
+                # TODO implement merging and save on same file
                 pickle.dump(self.mcts, open(f'model/history/{state.id}.pkl', 'wb'))
         else:
             raise Exception('Wrong level')
 
-    def end_turn(self):
+    def end_turn(self, node: Node):
+        """
+        :param node: node of the chosen action
+        """
+
         if self.turn == 1:
             self.save_history()
         self.turn += 1
+        self.mcts.new_root(node)
+        self._update_tau()

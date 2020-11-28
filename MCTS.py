@@ -3,6 +3,7 @@ import numpy as np
 import config as cfg
 import loggers as lg
 from game import State
+from utils import Timeit
 
 
 class Node:
@@ -21,6 +22,12 @@ class Node:
 
     def __ne__(self, other):
         return self.id != other.id
+
+    def __str__(self):
+        return f'ID: {self.id}\n' + '\n'.join([f'{edge}' for edge in self.edges])
+
+    def __format__(self, format_spec):
+        return self.__str__()
 
     def is_leaf(self) -> bool:
         return len(self.edges) == 0
@@ -41,6 +48,12 @@ class Edge:
         self.N = 0  # number of times action has been taken from initial state
         self.W = 0.  # total value of next state
         self.Q = 0.  # mean value of next state
+
+    def __str__(self):
+        return f'{self.action}: N = {self.N:0>3d}, W = {self.W:>5.0f}, Q = {self.Q:>6.2f}'
+
+    def __format__(self, format_spec):
+        return self.__str__()
 
 
 class MCTS:
@@ -119,6 +132,8 @@ class MCTS:
 
         return node, path
 
+    @profile
+    @Timeit(logger=lg.logger_mcts)
     def expand_leaf(self, leaf: Node) -> bool:
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
         found_terminal = leaf.state.is_terminal
@@ -131,6 +146,8 @@ class MCTS:
                 found_terminal = True
         return found_terminal
 
+    @profile
+    @Timeit(logger=lg.logger_mcts)
     def random_playout(self, leaf: Node, check_terminals):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
         current_state = leaf.state
@@ -166,3 +183,26 @@ class MCTS:
             direction *= -1
             edge.Q = edge.W / edge.N
             lg.logger_mcts.info('Act = {}, N = {}, W = {}, Q = {}'.format(edge.action, edge.N, edge.W, edge.Q))
+
+    def swap_values(self):
+        """ changes stats from white to black """
+        def aux(node):
+            for edge in node.edges:
+                if edge.N > 0:
+                    edge.W = edge.N - edge.W
+                    edge.Q = edge.W / edge.N
+        aux(self.root)
+
+    def cut_tree(self, cutoff: int):
+        """ deletes all nodes in the tree below a certain depth """
+        def aux(node, depth):
+            if depth <= 0:
+                # delete all descendant of this node
+                for edge in node.edges:
+                    self._delete_subtree(edge)
+                node.edges = []
+            else:
+                # this node and his children get to live
+                for edge in node.edges:
+                    aux(edge.out_node, depth - 1)
+        aux(self.root, cutoff)
