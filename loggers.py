@@ -1,7 +1,7 @@
 import logging
 
 disabled = {'player': False,
-            'mcts': False,
+            'mcts': True,
             'train': False,
             'nnet': False,
             'mem': False}

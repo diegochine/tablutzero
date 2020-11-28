@@ -54,7 +54,7 @@ class State:
         self.id: int = self.__hash__()
         self.value: int = 0
         self.checkers: set = self._get_checkers()
-        self.actions: list = []
+        self.actions: list = self._get_actions()
         self.is_terminal: bool = self._terminal_test()
 
     def __hash__(self):
@@ -77,7 +77,7 @@ class State:
         king = tuple(np.argwhere(self.board == 2).flatten())
         white_win = king in Game.escapes or -1 not in self.board
         black_win = 2 not in self.board
-        if (white_win or black_win):  # or not self.actions:
+        if (white_win or black_win) or not self.actions:
             # either the current player has lost or he cannot move (so he lost)
             self.value = -1
             return True
@@ -93,38 +93,37 @@ class State:
         else:
             return False
 
-    def get_actions(self) -> list:
-        if not self.actions:
-            for (x, y) in self.checkers:
-                # try up
-                newx = x - 1
-                while newx >= 0 and self.board[newx, y] == 0 and \
-                        ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
-                    self.actions.append(((x, y), (newx, y)))
-                    newx -= 1
+    def _get_actions(self) -> list:
+        actions = []
+        for (x, y) in self.checkers:
+            # try up
+            newx = x - 1
+            while newx >= 0 and self.board[newx, y] == 0 and \
+                    ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
+                actions.append(((x, y), (newx, y)))
+                newx -= 1
 
-                # try down
-                newx = x + 1
-                while newx <= 8 and self.board[newx, y] == 0 and \
-                        ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
-                    self.actions.append(((x, y), (newx, y)))
-                    newx += 1
+            # try down
+            newx = x + 1
+            while newx <= 8 and self.board[newx, y] == 0 and \
+                    ((newx, y) not in Game.citadels or self.__same_citadel_area((x, y), (newx, y))):
+                actions.append(((x, y), (newx, y)))
+                newx += 1
 
-                # try left
-                newy = y - 1
-                while newy >= 0 and self.board[x, newy] == 0 and \
-                        ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
-                    self.actions.append(((x, y), (x, newy)))
-                    newy -= 1
+            # try left
+            newy = y - 1
+            while newy >= 0 and self.board[x, newy] == 0 and \
+                    ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
+                actions.append(((x, y), (x, newy)))
+                newy -= 1
 
-                # try right
-                newy = y + 1
-                while newy <= 8 and self.board[x, newy] == 0 and \
-                        ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
-                    self.actions.append(((x, y), (x, newy)))
-                    newy += 1
-
-        return self.actions
+            # try right
+            newy = y + 1
+            while newy <= 8 and self.board[x, newy] == 0 and \
+                    ((x, newy) not in Game.citadels or self.__same_citadel_area((x, y), (x, newy))):
+                actions.append(((x, y), (x, newy)))
+                newy += 1
+        return actions
 
     def transition_function(self, action: tuple):
         """
@@ -144,6 +143,23 @@ class State:
                 if board[3, 4] == -1 and board[5, 4] == -1 and board[4, 5] == -1 and board[4, 3] == -1:
                     # king is surrounded, remove it
                     board[4, 4] = 0
+            # king is adiacent to the throne, must be surrounded
+            elif board[3, 4] == 2 and pos_end in [(3, 3), (2, 4), (3, 5)]:
+                if board[3, 3] == -1 and board[2, 4] == -1 and board[3, 5] == -1:
+                    # king is surrounded, remove it
+                    board[3, 4] = 0
+            elif board[5, 4] == 2 and pos_end in [(5, 3), (6, 4), (5, 5)]:
+                if board[5, 3] == -1 and board[6, 4] == -1 and board[5, 5] == -1:
+                    # king is surrounded, remove it
+                    board[5, 4] = 0
+            elif board[4, 5] == 2 and pos_end in [(3, 5), (4, 6), (5, 5)]:
+                if board[3, 5] == -1 and board[4, 6] == -1 and board[5, 5] == -1:
+                    # king is surrounded, remove it
+                    board[4, 5] = 0
+            elif board[4, 3] == 2 and pos_end in [(3, 3), (4, 2), (5, 3)]:
+                if board[3, 3] == -1 and board[4, 2] == -1 and board[5, 3] == -1:
+                    # king is surrounded, remove it
+                    board[4, 3] = 0
             else:
                 board = self._check_enemy_capture(board, pos_end, 2)
 

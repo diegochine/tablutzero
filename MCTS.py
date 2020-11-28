@@ -67,7 +67,7 @@ class MCTS:
         del self.root.edges
         self.root = None
 
-    def new_root(self, node: Node) -> None:
+    def new_root(self, node: Node):
         if self.root != node:
             tmp = self.root
             self.root = node
@@ -76,6 +76,11 @@ class MCTS:
             del tmp.edges
         if self.root.is_leaf():
             self.expand_leaf(self.root)
+        any_terminal = np.argwhere([edge.out_node.state.is_terminal for edge in self.root.edges])
+        if np.any(any_terminal):
+            return self.root.edges[any_terminal[0, 0]].action
+        else:
+            return None
 
     def select_leaf(self) -> (Node, list):
         lg.logger_mcts.info('SELECTING LEAF')
@@ -88,11 +93,9 @@ class MCTS:
             simulation_edge = None
             lg.logger_mcts.debug('PLAYER TURN {}'.format(node.state.turn))
 
-            if node.id == self.root.id:
-                epsilon = cfg.EPSILON
+            if node == self.root:
                 nu = np.random.dirichlet([cfg.ALPHA] * len(node.edges))
             else:
-                epsilon = 0
                 nu = [0] * len(node.edges)
 
             for i, edge in enumerate(node.edges):
@@ -118,8 +121,8 @@ class MCTS:
 
     def expand_leaf(self, leaf: Node) -> bool:
         lg.logger_mcts.info('EXPANDING LEAF WITH ID {}'.format(leaf.id))
-        found_terminal = False
-        for action in leaf.state.get_actions():
+        found_terminal = leaf.state.is_terminal
+        for action in leaf.state.actions:
             next_state = leaf.state.transition_function(action)
             new_leaf = Node(next_state)
             new_edge = Edge(leaf, new_leaf, action)
@@ -128,21 +131,37 @@ class MCTS:
                 found_terminal = True
         return found_terminal
 
-    def random_playout(self, leaf: Node):
+    def random_playout(self, leaf: Node, check_terminals):
         lg.logger_mcts.info('PERFORMING RANDOM PLAYOUT')
-        state = leaf.state
-        while not state.is_terminal:
-            acts = state.get_actions()
+        current_state = leaf.state
+        path = []
+        while not current_state.is_terminal:
             # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high)
-            rnd_a = acts[np.random.randint(0, len(acts))]
-            state = state.transition_function(rnd_a)
-        return state.value
+            if check_terminals:
+                next_states = ([current_state.transition_function(act) for act in current_state.actions])
+                any_terminal = np.argwhere([state.is_terminal for state in next_states])
+                if np.any(any_terminal):
+                    act_idx = any_terminal[0, 0]
+                else:
+                    act_idx = np.random.randint(0, len(current_state.actions))
+                path.append(current_state.actions[act_idx])
+                current_state = next_states[act_idx]
+            else:
+                act_idx = np.random.randint(0, len(current_state.actions))
+                path.append(current_state.actions[act_idx])
+                current_state = current_state.transition_function(current_state.actions[act_idx])
+
+        if current_state.turn != self.player:
+            return 1, path
+        else:
+            return -1, path
 
     def backpropagation(self, v, path: list):
         lg.logger_mcts.info('PERFORMING BACKPROPAGATION')
         direction = 1
+        n = np.abs(v)
         for edge in path:
-            edge.N += 1
+            edge.N += n
             edge.W += v * direction
             direction *= -1
             edge.Q = edge.W / edge.N

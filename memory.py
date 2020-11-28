@@ -1,6 +1,7 @@
 import os
 from collections import deque
 import pickle
+import numpy as np
 
 import config as cfg
 import loggers as lg
@@ -43,17 +44,20 @@ class Memory:
 
     def commit_stmemory(self, state):
         """
-
         :param state: State object
-        :return:
         """
-        lg.logger_memory.info('ADDING STATE WITH ID {}'.format(state.id))
-        self.stmemory.append({'state': state,
-                              'id': state.id,
-                              'value': None,
-                              'turn': state.turn})
+        # data augmentation exploiting symmetries
+        for rot in range(4):
+            rot_board = np.rot90(state.board, rot)
+            new_state = game.State(board=rot_board, turn=state.turn)
+            lg.logger_memory.info('ADDING STATE WITH ID {}'.format(new_state.id))
+            self.stmemory.append({'state': new_state,
+                                  'id': new_state.id,
+                                  'value': None,
+                                  'turn': new_state.turn})
 
     def commit_ltmemory(self, winner):
+        lg.logger_memory.info('COMMITTING WINNER OF THIS EPISODE: {}'.format(winner))
         for mem in self.stmemory:
             if winner == 0:
                 mem['value'] = 0
@@ -68,8 +72,8 @@ class Memory:
         lg.logger_memory.info('CLEANING SHORT TERM MEMORY')
         self.stmemory.clear()
 
-    def save(self, version):
-        pickle.dump(self.ltmemory, open('memories/mem{}.pkl'.format(version), 'wb'))
+    def save(self, name):
+        pickle.dump(self.ltmemory, open('memories/mem{}.pkl'.format(name), 'wb'))
 
     def clear_ltmemory(self):
         lg.logger_memory.info('CLEANING LONG TERM MEMORY')

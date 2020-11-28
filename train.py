@@ -4,12 +4,14 @@ from game import Game
 from memory import Memory, load_memories, compact_memories
 from neuralnet import ResidualNN
 from player import Player
+from utils import Timeit
 
 lg.logger_train.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 lg.logger_train.info('=*=*=*=*=*=.      NEW LOG      =*=*=*=*=*')
 lg.logger_train.info('=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*')
 
 
+@Timeit(logger=lg.logger_train)
 def self_play(p1: Player, p2: Player, memory: Memory):
     """ play one match of self play, saving the (partial) results in memory"""
     game = Game()
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
 
     # LOAD MEMORY STORAGE
-    ltmemory = load_memories()
+    ltmemory = None  # load_memories()
     memory = Memory(cfg.MEMORY_SIZE, ltmemory)
 
     # CREATE (AND EVENTUALLY LOAD) NETWORKS
@@ -67,14 +69,15 @@ if __name__ == "__main__":
         for episode in range(cfg.EPISODES):
             lg.logger_train.info('EPISODE {:0>3d}/{:0>3d}'.format(episode, cfg.EPISODES))
             self_play(white, black, memory)
+            memory.save('ep{:0>4d}'.format(episode))
+            memory.clear_ltmemory()
 
-        memory.save('v{:0>3d}'.format(version))
         compact_memories()
         ltmemory = load_memories()
-        memory = Memory(cfg.MEMORY_SIZE, ltmemory)
+        # memory = Memory(cfg.MEMORY_SIZE, ltmemory)
 
         lg.logger_train.info('RETRAINING NETWORK')
-        white.replay(memory.ltmemory)
+        white.replay(ltmemory)
         white.brain.save('general', version)
 
         # TODO evaluate network
