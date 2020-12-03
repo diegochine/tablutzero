@@ -1,3 +1,4 @@
+import os
 import time
 
 
@@ -47,3 +48,12 @@ class Timeit:
             return result
 
         return timed
+
+
+def setup_folders():
+    if 'logs' not in os.listdir():
+        os.mkdir('logs')
+    if 'model' not in os.listdir():
+        os.mkdir('model')
+        os.mkdir('model/history')
+        os.mkdir('model/brain')

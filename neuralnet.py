@@ -39,13 +39,13 @@ class NeuralNetwork:
         return self.model.fit(X, y, epochs=epochs, verbose=verbose,
                               validation_split=validation_split, batch_size=batch_size)
 
-    def save(self, color, version):
-        lg.logger_nnet.info('SAVING MODEL {}{:2d}'.format(color, version))
-        self.model.save('model/{}_version{}.h5'.format(color, version))
+    def save(self, version):
+        lg.logger_nnet.info('SAVING MODEL v{}'.format(version))
+        self.model.save('model/brain/v{}.h5'.format(version))
 
-    def load_model(self, color, version):
-        lg.logger_nnet.info('LOADING MODEL {}{:2d}'.format(color, version))
-        return load_model('model/{}version{}.h5'.format(color, version))
+    def load_model(self, version):
+        lg.logger_nnet.info('LOADING MODEL v{:2d}'.format(version))
+        self.model = load_model('model/brain/v{}.h5'.format(version))
 
     def printWeightAverages(self):
         layers = self.model.layers

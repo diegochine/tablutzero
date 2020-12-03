@@ -44,17 +44,16 @@ if __name__ == "__main__":
     endgame_map = {0: 'DRAW', 1: 'WHITE', -1: 'BLACK'}
 
     # LOAD MEMORY STORAGE
-    ltmemory = None  # load_memories()
+    ltmemory = load_memories()
     memory = Memory(cfg.MEMORY_SIZE, ltmemory)
 
     # CREATE (AND EVENTUALLY LOAD) NETWORKS
-    general_nn = ResidualNN()
     lg.logger_train.info('LOADED NETWORK')
 
     # CREATE PLAYERS
-    white = Player(color='WHITE', name='dc', nnet=general_nn,
+    white = Player(color='WHITE', name='dc', nnet_ver=cfg.CURRENT_VERSION,
                    timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS)
-    black = Player(color='BLACK', name='pd', nnet=general_nn,
+    black = Player(color='BLACK', name='pd', nnet_ver=cfg.CURRENT_VERSION,
                    timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS)
 
     # START!
@@ -78,6 +77,6 @@ if __name__ == "__main__":
 
         lg.logger_train.info('RETRAINING NETWORK')
         white.replay(ltmemory)
-        white.brain.save('general', version)
+        white.brain.save(version)
 
         # TODO evaluate network
