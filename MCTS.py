@@ -173,7 +173,6 @@ class MCTS:
         path = []
         v = 1
         while not current_state.is_terminal:
-            # FIXME sometimes during random playout we have 0 actions and it crashes (low >= high)
             if turn > 5:
                 next_states = ([current_state.transition_function(act) for act in current_state.actions])
                 any_terminal = np.argwhere([state.is_terminal for state in next_states])

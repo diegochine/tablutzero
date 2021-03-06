@@ -56,7 +56,7 @@ if __name__ == "__main__":
     black = Player(color='BLACK', name='pd', nnet_ver=cfg.CURRENT_VERSION,
                    timeout=cfg.TIMEOUT, simulations=cfg.MCTS_SIMULATIONS)
 
-    # START!
+    # START
     lg.logger_train.info('PLAYERS READY, STARTING MAIN LOOP')
     for version in range(cfg.TOTAL_ITERATIONS):
         lg.logger_train.info('ITERATION NUMBER {:0>3d}/{:0>3d}'.format(version, cfg.TOTAL_ITERATIONS))

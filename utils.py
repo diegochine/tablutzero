@@ -24,7 +24,7 @@ class Map:
         elif dim == 3:
             return self.ctoa.keys()
         else:
-            raise ValueError("dim must be either 2 o 3")
+            raise ValueError("dim must be 2 or 3")
 
 
 class Timeit:
